@@ -11,6 +11,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var verbose bool
+
 var addCmd = &cobra.Command{
 	Use:   "add",
 	Short: "Add a command to history",
@@ -37,10 +39,13 @@ var addCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		fmt.Printf("Command added to history: %s\n", command)
+		if verbose {
+			fmt.Printf("Command added to history: %s\n", command)
+		}
 	},
 }
 
 func init() {
+	addCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "verbose output")
 	rootCmd.AddCommand(addCmd)
 }
