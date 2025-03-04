@@ -61,6 +61,21 @@ database_path = "~/.duckhist.duckdb"
 		defer manager.Close()
 
 		fmt.Printf("Initialized database: %s\n", cfg.DatabasePath)
+		fmt.Println("\nTo integrate with zsh, add the following to your ~/.zshrc:")
+		fmt.Printf("source %s\n", filepath.Join(defaultConfigDir, "zsh-duckhist.zsh"))
+
+		// zsh-duckhist.zshをコピー
+		scriptContent := `# duckhist zsh integration
+duckhist_add_history() {
+    duckhist add -- "$1"
+}
+zshaddhistory_functions+=duckhist_add_history
+`
+		scriptPath := filepath.Join(defaultConfigDir, "zsh-duckhist.zsh")
+		if err := os.WriteFile(scriptPath, []byte(scriptContent), 0644); err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("\nCreated zsh integration script: %s\n", scriptPath)
 	},
 }
 
