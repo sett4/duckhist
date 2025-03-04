@@ -71,7 +71,7 @@ func (m *Manager) AddCommand(command string, directory string) error {
 }
 
 func (m *Manager) ListCommands() ([]string, error) {
-	rows, err := m.db.Query(`SELECT command FROM history ORDER BY executed_at DESC`)
+	rows, err := m.db.Query(`SELECT command FROM history ORDER BY id DESC`)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +95,7 @@ func (m *Manager) GetCurrentDirectoryHistory(currentDir string, limit int) ([]En
 		SELECT id, command, executed_at, executing_host, executing_dir, executing_user
 		FROM history
 		WHERE executing_dir = ?
-		ORDER BY executed_at DESC
+		ORDER BY id DESC
 		LIMIT ?
 	`
 
@@ -124,7 +124,7 @@ func (m *Manager) GetFullHistory(currentDir string) ([]Entry, error) {
 		SELECT id, command, executed_at, executing_host, executing_dir, executing_user
 		FROM history
 		WHERE executing_dir != ?
-		ORDER BY executed_at DESC
+		ORDER BY id DESC
 	`
 
 	rows, err := m.db.Query(query, currentDir)

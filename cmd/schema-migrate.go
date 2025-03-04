@@ -59,6 +59,7 @@ var schemaMigrateCmd = &cobra.Command{
 			)`},
 			{2, `CREATE INDEX idx_history_id ON history (id DESC);
 				CREATE INDEX idx_history_executed_at ON history (executed_at DESC);`},
+			{3, `DROP INDEX IF EXISTS idx_history_executed_at;`},
 		}
 
 		// Apply each migration that hasn't been applied yet
