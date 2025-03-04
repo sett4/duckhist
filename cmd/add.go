@@ -17,37 +17,74 @@ var (
 	addDirFlag string
 )
 
+// CommandAdder handles adding commands to history
+type CommandAdder struct {
+	configPath string
+	verbose    bool
+}
+
+// NewCommandAdder creates a new CommandAdder instance
+func NewCommandAdder(configPath string, verbose bool) *CommandAdder {
+	return &CommandAdder{
+		configPath: configPath,
+		verbose:    verbose,
+	}
+}
+
+// AddCommand adds a command to history
+func (ca *CommandAdder) AddCommand(command string, directory string) error {
+	command = strings.TrimSpace(command)
+	if command == "" {
+		if ca.verbose {
+			fmt.Println("Empty command, skipping")
+		}
+		return fmt.Errorf("empty command")
+	}
+
+	cfg, err := config.LoadConfig(ca.configPath)
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
+	}
+
+	manager, err := history.NewManagerReadWrite(cfg.DatabasePath)
+	if err != nil {
+		return fmt.Errorf("failed to create history manager: %w", err)
+	}
+	defer manager.Close()
+
+	// If directory is not specified, use current directory
+	if directory == "" {
+		dir, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("failed to get current directory: %w", err)
+		}
+		directory = dir
+	}
+
+	if err := manager.AddCommand(command, directory); err != nil {
+		return fmt.Errorf("failed to add command: %w", err)
+	}
+
+	if ca.verbose {
+		fmt.Printf("Command added to history: %s\n", command)
+	}
+
+	return nil
+}
+
 var addCmd = &cobra.Command{
 	Use:   "add",
 	Short: "Add a command to history",
 	Long:  `Add a command to the history database. Use -- to separate the command.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		command := strings.Join(args, " ")
-		command = strings.TrimSpace(command)
-		if command == "" {
-			if verbose {
-				fmt.Println("Empty command, skipping")
+
+		adder := NewCommandAdder(cfgFile, verbose)
+		if err := adder.AddCommand(command, addDirFlag); err != nil {
+			if err.Error() == "empty command" {
+				os.Exit(1)
 			}
-			os.Exit(1)
-		}
-
-		cfg, err := config.LoadConfig(cfgFile)
-		if err != nil {
 			log.Fatal(err)
-		}
-
-		manager, err := history.NewManagerReadWrite(cfg.DatabasePath)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer manager.Close()
-
-		if err := manager.AddCommand(command, addDirFlag); err != nil {
-			log.Fatal(err)
-		}
-
-		if verbose {
-			fmt.Printf("Command added to history: %s\n", command)
 		}
 	},
 }
