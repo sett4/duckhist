@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 	"strings"
 
 	"duckhist/internal/config"
@@ -18,9 +19,13 @@ var addCmd = &cobra.Command{
 	Short: "Add a command to history",
 	Long:  `Add a command to the history database. Use -- to separate the command.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) == 0 {
-			fmt.Println("No command provided")
-			return
+		command := strings.Join(args, " ")
+		command = strings.TrimSpace(command)
+		if command == "" {
+			if verbose {
+				fmt.Println("Empty command, skipping")
+			}
+			os.Exit(1)
 		}
 
 		cfg, err := config.LoadConfig(cfgFile)
@@ -34,7 +39,6 @@ var addCmd = &cobra.Command{
 		}
 		defer manager.Close()
 
-		command := strings.Join(args, " ")
 		if err := manager.AddCommand(command); err != nil {
 			log.Fatal(err)
 		}
