@@ -20,7 +20,7 @@ var listCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		manager, err := history.NewManager(cfg.DatabasePath)
+		manager, err := history.NewManagerReadOnly(cfg.DatabasePath)
 		if err != nil {
 			log.Fatal(err)
 		}

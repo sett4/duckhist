@@ -35,6 +35,14 @@
   - ULID を内部で生成し、UUID として DuckDB に保存
   - コマンドの実行時刻、ホスト名、ディレクトリ、ユーザー名も記録
 - `duckhist list`: 保存されたヒストリーを時系列順（新しい順）に表示
+- `duckhist history`: コマンド履歴をインクリメンタルサーチツール（peco/fzf）向けに出力
+  - 最新の N 件: カレントディレクトリで実行されたコマンドのみを表示（N は設定ファイルで指定可能、デフォルト 5 件）
+  - それ以降: 全てのディレクトリのコマンド履歴を表示
+  - peco や fzf と組み合わせることで、効率的なコマンド履歴の検索が可能
+- `duckhist schema-migrate`: データベースのスキーマを最新バージョンに更新
+  - golang-migrate/migrate を使用したスキーマバージョン管理
+  - マイグレーションファイルによる安全なスキーマ更新
+  - ロールバック機能のサポート
 
 ## 設定ファイル
 
@@ -43,6 +51,9 @@
 ```toml
 # DuckDBのデータベースファイルのパス
 database_path = "~/.duckhist.duckdb"
+
+# カレントディレクトリの履歴表示件数（デフォルト: 5）
+current_directory_history_limit = 5
 ```
 
 ## 実装の詳細
@@ -68,3 +79,12 @@ database_path = "~/.duckhist.duckdb"
    }
    ```
 4. コマンド履歴の表示: `duckhist list`
+5. インクリメンタルサーチでコマンド履歴を検索:
+
+   ```zsh
+   # pecoを使用する場合
+   duckhist history | peco
+
+   # fzfを使用する場合
+   duckhist history | fzf
+   ```

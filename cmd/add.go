@@ -12,7 +12,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var verbose bool
+var (
+	verbose    bool
+	addDirFlag string
+)
 
 var addCmd = &cobra.Command{
 	Use:   "add",
@@ -33,13 +36,13 @@ var addCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		manager, err := history.NewManager(cfg.DatabasePath)
+		manager, err := history.NewManagerReadWrite(cfg.DatabasePath)
 		if err != nil {
 			log.Fatal(err)
 		}
 		defer manager.Close()
 
-		if err := manager.AddCommand(command); err != nil {
+		if err := manager.AddCommand(command, addDirFlag); err != nil {
 			log.Fatal(err)
 		}
 
@@ -51,5 +54,6 @@ var addCmd = &cobra.Command{
 
 func init() {
 	addCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "verbose output")
+	addCmd.Flags().StringVarP(&addDirFlag, "directory", "d", "", "directory to record (default is current directory)")
 	rootCmd.AddCommand(addCmd)
 }

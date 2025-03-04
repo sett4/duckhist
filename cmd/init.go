@@ -54,7 +54,7 @@ database_path = "~/.duckhist.duckdb"
 		}
 
 		// Connect to database and create table
-		manager, err := history.NewManager(cfg.DatabasePath)
+		manager, err := history.NewManagerReadWrite(cfg.DatabasePath)
 		if err != nil {
 			log.Fatal(err)
 		}

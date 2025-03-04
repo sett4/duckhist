@@ -2,6 +2,7 @@ package history
 
 import (
 	"database/sql"
+	"fmt"
 	"os"
 	"time"
 
@@ -10,22 +11,37 @@ import (
 	"github.com/oklog/ulid/v2"
 )
 
+type Entry struct {
+	ID        string
+	Command   string
+	Timestamp time.Time
+	Hostname  string
+	Directory string
+	Username  string
+}
+
 type Manager struct {
 	db *sql.DB
 }
 
-func NewManager(dbPath string) (*Manager, error) {
+// NewManagerReadWrite creates a new Manager with read-write access to the database
+func NewManagerReadWrite(dbPath string) (*Manager, error) {
 	db, err := sql.Open("duckdb", dbPath)
 	if err != nil {
 		return nil, err
 	}
 
-	manager := &Manager{db: db}
-	if err := manager.initTable(); err != nil {
-		db.Close()
+	return &Manager{db: db}, nil
+}
+
+// NewManagerReadOnly creates a new Manager with read-only access to the database
+func NewManagerReadOnly(dbPath string) (*Manager, error) {
+	db, err := sql.Open("duckdb", dbPath+"?access_mode=READ_ONLY")
+	if err != nil {
 		return nil, err
 	}
 
+	manager := &Manager{db: db}
 	return manager, nil
 }
 
@@ -33,29 +49,24 @@ func (m *Manager) Close() error {
 	return m.db.Close()
 }
 
-func (m *Manager) initTable() error {
-	_, err := m.db.Exec(`CREATE TABLE IF NOT EXISTS history (
-		id UUID,
-		command TEXT,
-		executed_at TIMESTAMP,
-		executing_host TEXT,
-		executing_dir TEXT,
-		executing_user TEXT
-	)`)
-	return err
-}
-
-func (m *Manager) AddCommand(command string) error {
+func (m *Manager) AddCommand(command string, directory string) error {
 	executedAt := time.Now()
 	executingHost, _ := os.Hostname()
-	executingDir, _ := os.Getwd()
 	executingUser := os.Getenv("USER")
+
+	if directory == "" {
+		var err error
+		directory, err = os.Getwd()
+		if err != nil {
+			return fmt.Errorf("failed to get current directory: %w", err)
+		}
+	}
 
 	id := uuid.Must(uuid.FromBytes(ulid.Make().Bytes()))
 
 	_, err := m.db.Exec(`INSERT INTO history (id, command, executed_at, executing_host, executing_dir, executing_user) 
 		VALUES (?, ?, ?, ?, ?, ?)`,
-		id, command, executedAt, executingHost, executingDir, executingUser)
+		id, command, executedAt, executingHost, directory, executingUser)
 	return err
 }
 
@@ -76,4 +87,61 @@ func (m *Manager) ListCommands() ([]string, error) {
 	}
 
 	return commands, rows.Err()
+}
+
+// GetCurrentDirectoryHistory retrieves the last n commands executed in the current directory
+func (m *Manager) GetCurrentDirectoryHistory(currentDir string, limit int) ([]Entry, error) {
+	query := `
+		SELECT id, command, executed_at, executing_host, executing_dir, executing_user
+		FROM history
+		WHERE executing_dir = ?
+		ORDER BY executed_at DESC
+		LIMIT ?
+	`
+
+	rows, err := m.db.Query(query, currentDir, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries []Entry
+	for rows.Next() {
+		var entry Entry
+		err := rows.Scan(&entry.ID, &entry.Command, &entry.Timestamp, &entry.Hostname, &entry.Directory, &entry.Username)
+		if err != nil {
+			return nil, err
+		}
+		entries = append(entries, entry)
+	}
+
+	return entries, rows.Err()
+}
+
+// GetFullHistory retrieves all commands excluding those from the current directory
+func (m *Manager) GetFullHistory(currentDir string) ([]Entry, error) {
+	query := `
+		SELECT id, command, executed_at, executing_host, executing_dir, executing_user
+		FROM history
+		WHERE executing_dir != ?
+		ORDER BY executed_at DESC
+	`
+
+	rows, err := m.db.Query(query, currentDir)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries []Entry
+	for rows.Next() {
+		var entry Entry
+		err := rows.Scan(&entry.ID, &entry.Command, &entry.Timestamp, &entry.Hostname, &entry.Directory, &entry.Username)
+		if err != nil {
+			return nil, err
+		}
+		entries = append(entries, entry)
+	}
+
+	return entries, rows.Err()
 }

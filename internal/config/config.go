@@ -8,7 +8,8 @@ import (
 )
 
 type Config struct {
-	DatabasePath string `mapstructure:"database_path"`
+	DatabasePath              string `mapstructure:"database_path"`
+	CurrentDirectoryHistLimit int    `mapstructure:"current_directory_history_limit"`
 }
 
 func LoadConfig(configPath string) (*Config, error) {
@@ -20,13 +21,14 @@ func LoadConfig(configPath string) (*Config, error) {
 		configPath = filepath.Join(home, ".config", "duckhist", "duckhist.toml")
 	}
 
-	// デフォルト値の設定
+	// Set default values
 	viper.SetDefault("database_path", "~/.duckhist.duckdb")
+	viper.SetDefault("current_directory_history_limit", 5)
 
 	viper.SetConfigFile(configPath)
 	viper.SetConfigType("toml")
 
-	// 設定ファイルが存在しない場合は、デフォルト値を使用
+	// Use default values if config file does not exist
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 			return nil, err
@@ -38,7 +40,7 @@ func LoadConfig(configPath string) (*Config, error) {
 		return nil, err
 	}
 
-	// チルダ展開
+	// Expand tilde
 	if config.DatabasePath[:2] == "~/" {
 		home, err := os.UserHomeDir()
 		if err != nil {
