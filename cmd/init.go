@@ -17,7 +17,7 @@ var initCmd = &cobra.Command{
 	Short: "Initialize duckhist",
 	Long:  `Initialize duckhist by creating default config file and empty database.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// デフォルトの設定ファイルのパスを取得
+		// Get default config file path
 		home, err := os.UserHomeDir()
 		if err != nil {
 			log.Fatal(err)
@@ -25,46 +25,46 @@ var initCmd = &cobra.Command{
 		defaultConfigDir := filepath.Join(home, ".config", "duckhist")
 		defaultConfigPath := filepath.Join(defaultConfigDir, "duckhist.toml")
 
-		// 設定ディレクトリを作成
+		// Create config directory
 		if err := os.MkdirAll(defaultConfigDir, 0755); err != nil {
 			log.Fatal(err)
 		}
 
-		// 設定ファイルが存在しない場合のみ作成
+		// Create config file if it doesn't exist
 		if _, err := os.Stat(defaultConfigPath); os.IsNotExist(err) {
-			content := `# DuckDBのデータベースファイルのパス
+			content := `# Path to DuckDB database file
 database_path = "~/.duckhist.duckdb"
 `
 			if err := os.WriteFile(defaultConfigPath, []byte(content), 0644); err != nil {
 				log.Fatal(err)
 			}
-			fmt.Printf("Created config file: %s\n", defaultConfigPath)
+			fmt.Printf("Created config file at: %s\n", defaultConfigPath)
 		}
 
-		// 設定を読み込んでデータベースを初期化
+		// Load config and initialize database
 		cfg, err := config.LoadConfig(defaultConfigPath)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		// データベースディレクトリを作成
+		// Create database directory
 		dbDir := filepath.Dir(cfg.DatabasePath)
 		if err := os.MkdirAll(dbDir, 0755); err != nil {
 			log.Fatal(err)
 		}
 
-		// データベースに接続してテーブルを作成
+		// Connect to database and create table
 		manager, err := history.NewManager(cfg.DatabasePath)
 		if err != nil {
 			log.Fatal(err)
 		}
 		defer manager.Close()
 
-		fmt.Printf("Initialized database: %s\n", cfg.DatabasePath)
-		fmt.Println("\nTo integrate with zsh, add the following to your ~/.zshrc:")
+		fmt.Printf("Initialized database at: %s\n", cfg.DatabasePath)
+		fmt.Println("\nTo integrate with Zsh, add the following line to your ~/.zshrc:")
 		fmt.Printf("source %s\n", filepath.Join(defaultConfigDir, "zsh-duckhist.zsh"))
 
-		// zsh-duckhist.zshをコピー
+		// Copy zsh-duckhist.zsh
 		scriptContent := `# duckhist zsh integration
 duckhist_add_history() {
     duckhist add -- "$1"
@@ -75,7 +75,7 @@ zshaddhistory_functions+=duckhist_add_history
 		if err := os.WriteFile(scriptPath, []byte(scriptContent), 0644); err != nil {
 			log.Fatal(err)
 		}
-		fmt.Printf("\nCreated zsh integration script: %s\n", scriptPath)
+		fmt.Printf("\nCreated Zsh integration script at: %s\n", scriptPath)
 	},
 }
 
