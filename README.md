@@ -69,6 +69,9 @@ duckhist history | fzf
 - `duckhist list`: Display saved history in chronological order (newest first)
 - `duckhist history`: Output command history for incremental search tools
 - `duckhist schema-migrate`: Update database schema to the latest version
+- `duckhist force-version`: Force database schema version
+  - `--config`: Specify configuration file path
+  - `--update-to`: Specify version number to set (default: 2)
 
 ## Configuration File
 
@@ -101,10 +104,14 @@ current_directory_history_limit = 5
 
 ### Schema Management
 
-- Schema version management using golang-migrate/migrate
-- Safe schema updates through migration files
-- Rollback functionality support
-- SQLite driver used to ensure compatibility with DuckDB
+- Schema version management through migration files
+  - Each migration file has a version number and is applied in order
+  - Schema version is managed in the `schema_migrations` table in the database
+  - Version can be forcibly set using the `force-version` command
+- Migration files in `internal/migrations/` directory
+  - `000001_create_history_table.up.sql`: Initial schema creation (history table)
+  - `000002_add_primary_key_and_index.up.sql`: Add index on id column
+- Rollback functionality support through down migration files
 
 ### History Management
 

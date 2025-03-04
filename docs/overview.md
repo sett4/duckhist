@@ -40,9 +40,11 @@
   - それ以降: 全てのディレクトリのコマンド履歴を表示
   - peco や fzf と組み合わせることで、効率的なコマンド履歴の検索が可能
 - `duckhist schema-migrate`: データベースのスキーマを最新バージョンに更新
-  - golang-migrate/migrate を使用したスキーマバージョン管理
   - マイグレーションファイルによる安全なスキーマ更新
   - ロールバック機能のサポート
+- `duckhist force-version`: データベースのスキーマバージョンを強制的に設定
+  - `--config`: 設定ファイルのパスを指定
+  - `--update-to`: 設定するバージョン番号を指定（デフォルト: 2）
 
 ## 設定ファイル
 
@@ -61,12 +63,14 @@ current_directory_history_limit = 5
 ### スキーマ管理
 
 - `internal/migrations/`: データベーススキーマのマイグレーション
-  - `000001_create_history_table.up.sql`: 初期スキーマ作成
+  - `000001_create_history_table.up.sql`: 初期スキーマ作成（history テーブル）
   - `000001_create_history_table.down.sql`: ロールバック用
-- golang-migrate/migrate を使用したスキーマバージョン管理
-  - マイグレーションファイルによる安全なスキーマ更新
-  - ロールバック機能のサポート
-  - SQLite ドライバーを使用して DuckDB と互換性を確保
+  - `000002_add_primary_key_and_index.up.sql`: インデックス追加
+  - `000002_add_primary_key_and_index.down.sql`: ロールバック用
+- マイグレーションファイルによる安全なスキーマ更新
+  - 各マイグレーションファイルはバージョン番号を持ち、順番に適用
+  - スキーマバージョンはデータベース内の`schema_migrations`テーブルで管理
+  - `force-version`コマンドでスキーマバージョンを強制的に設定可能
 
 ### ディレクトリ構造
 
