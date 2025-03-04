@@ -58,6 +58,18 @@ current_directory_history_limit = 5
 
 ## 実装の詳細
 
+### スキーマ管理
+
+- `internal/migrations/`: データベーススキーマのマイグレーション
+  - `000001_create_history_table.up.sql`: 初期スキーマ作成
+  - `000001_create_history_table.down.sql`: ロールバック用
+- golang-migrate/migrate を使用したスキーマバージョン管理
+  - マイグレーションファイルによる安全なスキーマ更新
+  - ロールバック機能のサポート
+  - SQLite ドライバーを使用して DuckDB と互換性を確保
+
+### ディレクトリ構造
+
 - `cmd/`: コマンドラインインターフェース
   - `main.go`: エントリーポイント
   - `root.go`: ルートコマンドの定義
