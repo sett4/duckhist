@@ -20,12 +20,27 @@
 - `github.com/duckdb/duckdb-go`: DuckDB の Go バインディング
 - `github.com/spf13/cobra`: コマンドラインインターフェースの構築に使用
 
-## 基本的な機能
+## コマンドライン
+
+### グローバルオプション
+
+- `--config CONFIG_FILE`: 設定ファイルのパス（デフォルト: `~/.config/duckhist/duckhist.toml`）
+
+### サブコマンド
 
 - `duckhist add -- <command>`: コマンドをヒストリーに追加
   - ULID を内部で生成し、UUID として DuckDB に保存
   - コマンドの実行時刻、ホスト名、ディレクトリ、ユーザー名も記録
 - `duckhist list`: 保存されたヒストリーを時系列順（新しい順）に表示
+
+## 設定ファイル
+
+設定ファイル（デフォルト: `~/.config/duckhist/duckhist.toml`）では以下の項目を設定できます：
+
+```toml
+# DuckDBのデータベースファイルのパス
+database_path = "~/.duckhist.duckdb"
+```
 
 ## 実装の詳細
 

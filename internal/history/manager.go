@@ -14,8 +14,8 @@ type Manager struct {
 	db *sql.DB
 }
 
-func NewManager() (*Manager, error) {
-	db, err := sql.Open("duckdb", os.Getenv("HOME")+"/.duckhist.duckdb")
+func NewManager(dbPath string) (*Manager, error) {
+	db, err := sql.Open("duckdb", dbPath)
 	if err != nil {
 		return nil, err
 	}

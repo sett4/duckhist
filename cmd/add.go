@@ -5,6 +5,7 @@ import (
 	"log"
 	"strings"
 
+	"duckhist/internal/config"
 	"duckhist/internal/history"
 
 	"github.com/spf13/cobra"
@@ -20,7 +21,12 @@ var addCmd = &cobra.Command{
 			return
 		}
 
-		manager, err := history.NewManager()
+		cfg, err := config.LoadConfig(cfgFile)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		manager, err := history.NewManager(cfg.DatabasePath)
 		if err != nil {
 			log.Fatal(err)
 		}
