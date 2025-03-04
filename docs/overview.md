@@ -28,6 +28,9 @@
 
 ### サブコマンド
 
+- `duckhist init`: 初期設定を行う
+  - デフォルトの設定ファイル（`~/.config/duckhist/duckhist.toml`）を作成
+  - 空のデータベースファイル（`~/.duckhist.duckdb`）を作成
 - `duckhist add -- <command>`: コマンドをヒストリーに追加
   - ULID を内部で生成し、UUID として DuckDB に保存
   - コマンドの実行時刻、ホスト名、ディレクトリ、ユーザー名も記録
@@ -57,10 +60,11 @@ database_path = "~/.duckhist.duckdb"
 ## 使用方法
 
 1. プロジェクトをビルド: `go build -o duckhist ./cmd`
-2. zsh の設定ファイル（`~/.zshrc`）に以下を追加:
+2. 初期設定を実行: `duckhist init`
+3. zsh の設定ファイル（`~/.zshrc`）に以下を追加:
    ```zsh
    zshaddhistory() {
        /path/to/duckhist add -- "$1"
    }
    ```
-3. コマンド履歴の表示: `duckhist list`
+4. コマンド履歴の表示: `duckhist list`
