@@ -100,7 +100,7 @@ func (ic *InitConfig) CreateZshIntegration() error {
 duckhist_add_history() {
     duckhist add -- "$1"
 }
-zshaddhistory_functions+=duckhist_add_history
+zshaddhistory_functions+=("duckhist_add_history")
 `
 	if err := os.WriteFile(scriptPath, []byte(scriptContent), 0644); err != nil {
 		return fmt.Errorf("failed to create Zsh integration script: %w", err)
