@@ -1,0 +1,4 @@
+ALTER TABLE history
+ADD COLUMN tty TEXT;
+ALTER TABLE history
+ADD COLUMN sid TEXT;

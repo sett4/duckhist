@@ -18,6 +18,8 @@ type Entry struct {
 	Hostname  string
 	Directory string
 	Username  string
+	TTY       string
+	SID       string
 }
 
 type Manager struct {
@@ -49,7 +51,7 @@ func (m *Manager) Close() error {
 	return m.db.Close()
 }
 
-func (m *Manager) AddCommand(command string, directory string) error {
+func (m *Manager) AddCommand(command string, directory string, tty string, sid string) error {
 	executedAt := time.Now()
 	executingHost, _ := os.Hostname()
 	executingUser := os.Getenv("USER")
@@ -64,9 +66,12 @@ func (m *Manager) AddCommand(command string, directory string) error {
 
 	id := uuid.Must(uuid.FromBytes(ulid.Make().Bytes()))
 
-	_, err := m.db.Exec(`INSERT INTO history (id, command, executed_at, executing_host, executing_dir, executing_user) 
-		VALUES (?, ?, ?, ?, ?, ?)`,
-		id, command, executedAt, executingHost, directory, executingUser)
+	_, err := m.db.Exec(`
+        INSERT INTO history (
+            id, command, executed_at, executing_host, 
+            executing_dir, executing_user, tty, sid
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		id, command, executedAt, executingHost, directory, executingUser, tty, sid)
 	return err
 }
 
@@ -92,7 +97,7 @@ func (m *Manager) ListCommands() ([]string, error) {
 // GetCurrentDirectoryHistory retrieves the last n commands executed in the current directory
 func (m *Manager) GetCurrentDirectoryHistory(currentDir string, limit int) ([]Entry, error) {
 	query := `
-		SELECT id, command, executed_at, executing_host, executing_dir, executing_user
+		SELECT id, command, executed_at, executing_host, executing_dir, executing_user, tty, sid
 		FROM history
 		WHERE executing_dir = ?
 		ORDER BY id DESC
@@ -108,7 +113,7 @@ func (m *Manager) GetCurrentDirectoryHistory(currentDir string, limit int) ([]En
 	var entries []Entry
 	for rows.Next() {
 		var entry Entry
-		err := rows.Scan(&entry.ID, &entry.Command, &entry.Timestamp, &entry.Hostname, &entry.Directory, &entry.Username)
+		err := rows.Scan(&entry.ID, &entry.Command, &entry.Timestamp, &entry.Hostname, &entry.Directory, &entry.Username, &entry.TTY, &entry.SID)
 		if err != nil {
 			return nil, err
 		}
@@ -121,7 +126,7 @@ func (m *Manager) GetCurrentDirectoryHistory(currentDir string, limit int) ([]En
 // GetFullHistory retrieves all commands excluding those from the current directory
 func (m *Manager) GetFullHistory(currentDir string) ([]Entry, error) {
 	query := `
-		SELECT id, command, executed_at, executing_host, executing_dir, executing_user
+		SELECT id, command, executed_at, executing_host, executing_dir, executing_user, tty, sid
 		FROM history
 		WHERE executing_dir != ?
 		ORDER BY id DESC
@@ -136,7 +141,7 @@ func (m *Manager) GetFullHistory(currentDir string) ([]Entry, error) {
 	var entries []Entry
 	for rows.Next() {
 		var entry Entry
-		err := rows.Scan(&entry.ID, &entry.Command, &entry.Timestamp, &entry.Hostname, &entry.Directory, &entry.Username)
+		err := rows.Scan(&entry.ID, &entry.Command, &entry.Timestamp, &entry.Hostname, &entry.Directory, &entry.Username, &entry.TTY, &entry.SID)
 		if err != nil {
 			return nil, err
 		}

@@ -1,0 +1,2 @@
+ALTER TABLE history DROP COLUMN tty;
+ALTER TABLE history DROP COLUMN sid;

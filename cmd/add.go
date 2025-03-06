@@ -13,6 +13,8 @@ import (
 )
 
 var (
+	tty        string
+	sid        string
 	verbose    bool
 	addDirFlag string
 )
@@ -21,13 +23,20 @@ var (
 type CommandAdder struct {
 	configPath string
 	verbose    bool
+	tty        string
+	sid        string
 }
 
 // NewCommandAdder creates a new CommandAdder instance
-func NewCommandAdder(configPath string, verbose bool) *CommandAdder {
+func NewCommandAdder(configPath string, verbose bool, tty string, sid string) *CommandAdder {
+	if tty == "" {
+		tty = os.Getenv("TTY")
+	}
 	return &CommandAdder{
 		configPath: configPath,
 		verbose:    verbose,
+		tty:        tty,
+		sid:        sid,
 	}
 }
 
@@ -61,7 +70,7 @@ func (ca *CommandAdder) AddCommand(command string, directory string) error {
 		directory = dir
 	}
 
-	if err := manager.AddCommand(command, directory); err != nil {
+	if err := manager.AddCommand(command, directory, ca.tty, ca.sid); err != nil {
 		return fmt.Errorf("failed to add command: %w", err)
 	}
 
@@ -79,7 +88,7 @@ var addCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		command := strings.Join(args, " ")
 
-		adder := NewCommandAdder(cfgFile, verbose)
+		adder := NewCommandAdder(cfgFile, verbose, tty, sid)
 		if err := adder.AddCommand(command, addDirFlag); err != nil {
 			if err.Error() == "empty command" {
 				os.Exit(1)
@@ -92,5 +101,7 @@ var addCmd = &cobra.Command{
 func init() {
 	addCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "verbose output")
 	addCmd.Flags().StringVarP(&addDirFlag, "directory", "d", "", "directory to record (default is current directory)")
+	addCmd.Flags().StringVar(&tty, "tty", "", "TTY (default is $TTY)")
+	addCmd.Flags().StringVar(&sid, "sid", "", "Session ID")
 	rootCmd.AddCommand(addCmd)
 }
