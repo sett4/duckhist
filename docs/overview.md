@@ -90,9 +90,7 @@ current_directory_history_limit = 5
 2. 初期設定を実行: `duckhist init`
 3. zsh の設定ファイル（`~/.zshrc`）に以下を追加:
    ```zsh
-   zshaddhistory() {
-       /path/to/duckhist add -- "$1"
-   }
+   source ~/.config/duckhist/zsh-duckhist.zsh
    ```
 4. コマンド履歴の表示: `duckhist list`
 5. インクリメンタルサーチでコマンド履歴を検索:

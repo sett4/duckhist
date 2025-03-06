@@ -32,12 +32,10 @@ This creates the default configuration file (`~/.config/duckhist/duckhist.toml`)
 
 ### zsh Configuration
 
-Add the following to your `~/.zshrc`:
+Update your `~/.zshrc` to include:
 
 ```zsh
-zshaddhistory() {
-    /path/to/duckhist add -- "$1"
-}
+source ~/.config/duckhist/zsh-duckhist.zsh
 ```
 
 ### Display Command History
