@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"os"
 	"path/filepath"
 	"testing"
@@ -33,8 +32,8 @@ current_directory_history_limit = 5
 	// Set the config file path for the test
 	cfgFile = configPath
 
-	// Initialize the database
-	if err := initializeTestDatabase(dbPath); err != nil {
+	// Initialize the database with migrations
+	if err := RunMigrations(dbPath); err != nil {
 		t.Fatalf("Failed to initialize database: %v", err)
 	}
 
@@ -110,31 +109,4 @@ current_directory_history_limit = 5
 	if len(results) < 3 || results[0].Directory != currentDir {
 		t.Errorf("Current directory commands should be listed first")
 	}
-}
-
-// Helper function to initialize a test database
-func initializeTestDatabase(dbPath string) error {
-	// Open the database directly
-	db, err := sql.Open("duckdb", dbPath)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
-	// Execute the schema creation SQL
-	_, err = db.Exec(`
-		CREATE TABLE IF NOT EXISTS history (
-			id UUID PRIMARY KEY,
-			command TEXT NOT NULL,
-			executed_at TIMESTAMP NOT NULL,
-			executing_host TEXT NOT NULL,
-			executing_dir TEXT NOT NULL,
-			executing_user TEXT NOT NULL,
-			tty TEXT,
-			sid TEXT
-		);
-		CREATE INDEX IF NOT EXISTS idx_history_executed_at ON history (executed_at);
-		CREATE INDEX IF NOT EXISTS idx_history_executing_dir ON history (executing_dir);
-	`)
-	return err
 }
