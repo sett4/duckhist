@@ -148,3 +148,69 @@ func (m *Manager) GetFullHistory(currentDir string) ([]Entry, error) {
 
 	return entries, rows.Err()
 }
+
+// GetAllHistory retrieves all commands with current directory entries first
+func (m *Manager) GetAllHistory(currentDir string) ([]Entry, error) {
+	query := `
+		SELECT id, command, executed_at, executing_host, executing_dir, executing_user, tty, sid
+		FROM history
+		ORDER BY 
+			CASE WHEN executing_dir = ? THEN 0 ELSE 1 END,
+			id DESC
+	`
+
+	rows, err := m.db.Query(query, currentDir)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries []Entry
+	for rows.Next() {
+		var entry Entry
+		err := rows.Scan(&entry.ID, &entry.Command, &entry.Timestamp, &entry.Hostname, &entry.Directory, &entry.Username, &entry.TTY, &entry.SID)
+		if err != nil {
+			return nil, err
+		}
+		entries = append(entries, entry)
+	}
+
+	return entries, rows.Err()
+}
+
+// SearchCommands searches for commands matching the given query
+// If query is empty, returns all commands
+// Results are ordered with current directory entries first
+func (m *Manager) SearchCommands(query string, currentDir string) ([]Entry, error) {
+	if query == "" {
+		return m.GetAllHistory(currentDir)
+	}
+
+	searchQuery := fmt.Sprintf("%%%s%%", query)
+	sqlQuery := `
+		SELECT id, command, executed_at, executing_host, executing_dir, executing_user, tty, sid
+		FROM history
+		WHERE command LIKE ?
+		ORDER BY 
+			CASE WHEN executing_dir = ? THEN 0 ELSE 1 END,
+			id DESC
+	`
+
+	rows, err := m.db.Query(sqlQuery, searchQuery, currentDir)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries []Entry
+	for rows.Next() {
+		var entry Entry
+		err := rows.Scan(&entry.ID, &entry.Command, &entry.Timestamp, &entry.Hostname, &entry.Directory, &entry.Username, &entry.TTY, &entry.SID)
+		if err != nil {
+			return nil, err
+		}
+		entries = append(entries, entry)
+	}
+
+	return entries, rows.Err()
+}
