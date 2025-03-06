@@ -16,7 +16,7 @@ var (
 	tty        string
 	sid        string
 	verbose    bool
-	addDirFlag string
+	workingDir string
 )
 
 // CommandAdder handles adding commands to history
@@ -89,7 +89,7 @@ var addCmd = &cobra.Command{
 		command := strings.Join(args, " ")
 
 		adder := NewCommandAdder(cfgFile, verbose, tty, sid)
-		if err := adder.AddCommand(command, addDirFlag); err != nil {
+		if err := adder.AddCommand(command, workingDir); err != nil {
 			if err.Error() == "empty command" {
 				os.Exit(1)
 			}
@@ -100,7 +100,7 @@ var addCmd = &cobra.Command{
 
 func init() {
 	addCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "verbose output")
-	addCmd.Flags().StringVarP(&addDirFlag, "directory", "d", "", "directory to record (default is current directory)")
+	addCmd.Flags().StringVarP(&workingDir, "directory", "d", "", "directory to record (default is current directory)")
 	addCmd.Flags().StringVar(&tty, "tty", "", "TTY (default is $TTY)")
 	addCmd.Flags().StringVar(&sid, "sid", "", "Session ID")
 	rootCmd.AddCommand(addCmd)
