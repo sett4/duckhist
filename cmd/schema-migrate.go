@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"duckhist/internal/config"
+	"duckhist/internal/embedded"
 	"fmt"
 	"io/fs"
 	"log"
@@ -41,10 +42,14 @@ func RunMigrations(dbPath string) error {
 		return fmt.Errorf("failed to get current schema version: %w", err)
 	}
 
-	// Get all migration files
-	migrations, err := loadMigrations("internal/migrations")
+	// Get all migration files from embedded filesystem
+	migrations, err := loadEmbeddedMigrations()
 	if err != nil {
-		return fmt.Errorf("failed to load migrations: %w", err)
+		// Fallback to file system migrations if embedded migrations fail
+		migrations, err = loadMigrations("internal/migrations")
+		if err != nil {
+			return fmt.Errorf("failed to load migrations: %w", err)
+		}
 	}
 
 	// Debug: Print loaded migrations
@@ -111,7 +116,90 @@ type Migration struct {
 	DownSQL string
 }
 
+// loadEmbeddedMigrations loads all migration files from the embedded filesystem
+func loadEmbeddedMigrations() ([]Migration, error) {
+	// Regular expression to extract version from filename
+	versionRegex := regexp.MustCompile(`^0*(\d+)_.*\.(?:up|down)\.sql$`)
+
+	// Map to store migrations by version
+	migrationsMap := make(map[int]*Migration)
+
+	// Get the embedded filesystem
+	migrationsFS := embedded.GetMigrationsFS()
+
+	// Walk through embedded migrations directory
+	err := fs.WalkDir(migrationsFS, "migrations", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Skip directories
+		if d.IsDir() {
+			return nil
+		}
+
+		// Skip non-SQL files
+		if !strings.HasSuffix(d.Name(), ".sql") {
+			return nil
+		}
+
+		// Extract version from filename
+		matches := versionRegex.FindStringSubmatch(d.Name())
+		if len(matches) < 2 {
+			return nil
+		}
+
+		// Parse version
+		version, err := strconv.Atoi(matches[1])
+		if err != nil {
+			return err
+		}
+
+		// Read file content
+		content, err := fs.ReadFile(migrationsFS, path)
+		if err != nil {
+			return err
+		}
+
+		// Create migration if it doesn't exist
+		if _, exists := migrationsMap[version]; !exists {
+			migrationsMap[version] = &Migration{Version: version}
+		}
+
+		// Set up or down SQL based on filename
+		if strings.HasSuffix(d.Name(), ".up.sql") {
+			migrationsMap[version].UpSQL = string(content)
+		} else if strings.HasSuffix(d.Name(), ".down.sql") {
+			migrationsMap[version].DownSQL = string(content)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert map to slice and sort by version
+	migrations := make([]Migration, 0, len(migrationsMap))
+	for _, m := range migrationsMap {
+		migrations = append(migrations, *m)
+	}
+
+	// Sort migrations by version
+	for i := 0; i < len(migrations)-1; i++ {
+		for j := i + 1; j < len(migrations); j++ {
+			if migrations[i].Version > migrations[j].Version {
+				migrations[i], migrations[j] = migrations[j], migrations[i]
+			}
+		}
+	}
+
+	return migrations, nil
+}
+
 // loadMigrations loads all migration files from the specified directory
+// This function is kept for backward compatibility and as a fallback
 func loadMigrations(migrationsDir string) ([]Migration, error) {
 	// Check if migrations directory exists
 	if _, err := os.Stat(migrationsDir); os.IsNotExist(err) {
