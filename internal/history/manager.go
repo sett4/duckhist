@@ -2,6 +2,7 @@ package history
 
 import (
 	"database/sql"
+	"duckhist/internal/migrate"
 	"fmt"
 	"os"
 	"time"
@@ -26,12 +27,31 @@ type Manager struct {
 	db *sql.DB
 }
 
+// checkSchemaVersion checks if the database schema version matches the required version
+// and prints a warning if they don't match
+func checkSchemaVersion(db *sql.DB) {
+	ok, current, required, err := migrate.CheckSchemaVersion(db)
+	if err != nil {
+		// Just log the error and continue, don't prevent operation
+		fmt.Fprintf(os.Stderr, "Warning: Failed to check schema version: %v\n", err)
+		return
+	}
+
+	if !ok {
+		fmt.Fprintf(os.Stderr, "Warning: Database schema version mismatch. Current: %d, Required: %d\n", current, required)
+		fmt.Fprintf(os.Stderr, "Please run 'duckhist schema-migrate' to update the schema\n")
+	}
+}
+
 // NewManagerReadWrite creates a new Manager with read-write access to the database
 func NewManagerReadWrite(dbPath string) (*Manager, error) {
 	db, err := sql.Open("duckdb", dbPath)
 	if err != nil {
 		return nil, err
 	}
+
+	// Check schema version
+	checkSchemaVersion(db)
 
 	return &Manager{db: db}, nil
 }
@@ -42,6 +62,9 @@ func NewManagerReadOnly(dbPath string) (*Manager, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Check schema version
+	checkSchemaVersion(db)
 
 	manager := &Manager{db: db}
 	return manager, nil
