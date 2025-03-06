@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"database/sql"
 	"fmt"
 	"io"
 	"os"
@@ -27,27 +26,10 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 			t.Fatalf("failed to create config file: %v", err)
 		}
 
-		// Initialize database with schema
-		db, err := sql.Open("duckdb", dbPath)
-		if err != nil {
-			t.Fatalf("failed to open database: %v", err)
+		// Run migrations to initialize database schema
+		if err := RunMigrations(dbPath); err != nil {
+			t.Fatalf("failed to run migrations: %v", err)
 		}
-
-		// Create history table
-		_, err = db.Exec(`CREATE TABLE IF NOT EXISTS history (
-			id UUID PRIMARY KEY,
-			command TEXT,
-			executed_at TIMESTAMP,
-			executing_host TEXT,
-			executing_dir TEXT,
-			executing_user TEXT,
-			tty TEXT,
-			sid TEXT
-		)`)
-		if err != nil {
-			t.Fatalf("failed to create history table: %v", err)
-		}
-		db.Close()
 
 		// Create CommandAdder
 		adder := NewCommandAdder(configPath, false)
@@ -101,27 +83,10 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 			t.Fatalf("failed to create config file: %v", err)
 		}
 
-		// Initialize database with schema
-		db, err := sql.Open("duckdb", dbPath)
-		if err != nil {
-			t.Fatalf("failed to open database: %v", err)
+		// Run migrations to initialize database schema
+		if err := RunMigrations(dbPath); err != nil {
+			t.Fatalf("failed to run migrations: %v", err)
 		}
-
-		// Create history table
-		_, err = db.Exec(`CREATE TABLE IF NOT EXISTS history (
-			id UUID PRIMARY KEY,
-			command TEXT,
-			executed_at TIMESTAMP,
-			executing_host TEXT,
-			executing_dir TEXT,
-			executing_user TEXT,
-			tty TEXT,
-			sid TEXT
-		)`)
-		if err != nil {
-			t.Fatalf("failed to create history table: %v", err)
-		}
-		db.Close()
 
 		// Create CommandAdder
 		adder := NewCommandAdder(configPath, false)
@@ -197,27 +162,10 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 			t.Fatalf("failed to create config file: %v", err)
 		}
 
-		// Initialize database with schema
-		db, err := sql.Open("duckdb", dbPath)
-		if err != nil {
-			t.Fatalf("failed to open database: %v", err)
+		// Run migrations to initialize database schema
+		if err := RunMigrations(dbPath); err != nil {
+			t.Fatalf("failed to run migrations: %v", err)
 		}
-
-		// Create history table
-		_, err = db.Exec(`CREATE TABLE IF NOT EXISTS history (
-			id UUID PRIMARY KEY,
-			command TEXT,
-			executed_at TIMESTAMP,
-			executing_host TEXT,
-			executing_dir TEXT,
-			executing_user TEXT,
-			tty TEXT,
-			sid TEXT
-		)`)
-		if err != nil {
-			t.Fatalf("failed to create history table: %v", err)
-		}
-		db.Close()
 
 		// Create CommandAdder with verbose mode
 		adder := NewCommandAdder(configPath, true)
@@ -272,27 +220,10 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 			t.Fatalf("failed to create config file: %v", err)
 		}
 
-		// Initialize database with schema
-		db, err := sql.Open("duckdb", dbPath)
-		if err != nil {
-			t.Fatalf("failed to open database: %v", err)
+		// Run migrations to initialize database schema
+		if err := RunMigrations(dbPath); err != nil {
+			t.Fatalf("failed to run migrations: %v", err)
 		}
-
-		// Create history table
-		_, err = db.Exec(`CREATE TABLE IF NOT EXISTS history (
-			id UUID PRIMARY KEY,
-			command TEXT,
-			executed_at TIMESTAMP,
-			executing_host TEXT,
-			executing_dir TEXT,
-			executing_user TEXT,
-			tty TEXT,
-			sid TEXT
-		)`)
-		if err != nil {
-			t.Fatalf("failed to create history table: %v", err)
-		}
-		db.Close()
 
 		// Create CommandAdder with TTY and SID
 		tty := "/dev/pts/1"
