@@ -93,7 +93,7 @@ var ii = 0
 // SetVersion sets the current migration version
 func (d *DuckDB) SetVersion(version int, dirty bool) error {
 	fmt.Println("version", version, "dirty", dirty)
-	_, err := d.db.Exec("INSERT INTO schema_migrations (version, dirty) VALUES (?, ?) ON CONFLICT DO UPDATE SET dirty = EXCLUDED.dirty", version, dirty)
+	_, err := d.db.Exec("INSERT INTO schema_migrations (version, dirty, applied_at) VALUES (?, ?, now()) ON CONFLICT DO UPDATE SET dirty = EXCLUDED.dirty, applied_at = now()", version, dirty)
 	return err
 }
 
@@ -132,7 +132,7 @@ func (d *DuckDB) ensureVersionTable() (err error) {
 		}
 	}()
 
-	query := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS schema_migrations (version BIGINT PRIMARY KEY, dirty BOOLEAN);`)
+	query := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS schema_migrations (version BIGINT PRIMARY KEY, dirty BOOLEAN, applied_at TIMESTAMP default current_timestamp);`)
 
 	if _, err := d.db.Exec(query); err != nil {
 		return fmt.Errorf("creating version table via '%s': %w", query, err)
