@@ -33,7 +33,15 @@ func RunMigrations(dbPath string) error {
 		return fmt.Errorf("failed to apply migrations: %w", err)
 	}
 
-	fmt.Println("Database schema is up to date")
+	// Get current version
+	version, dirty, err := m.Version()
+	if err != nil {
+		return fmt.Errorf("failed to get schema version: %w", err)
+	}
+
+	fmt.Printf("Database schema is up to date\n")
+	fmt.Printf("Database path: %s\n", dbPath)
+	fmt.Printf("Schema version: %d (dirty: %v)\n", version, dirty)
 	return nil
 }
 
