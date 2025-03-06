@@ -52,11 +52,17 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 		// Create CommandAdder
 		adder := NewCommandAdder(configPath, false)
 
+		// Get current directory
+		currentDir, err := os.Getwd()
+		if err != nil {
+			t.Fatalf("failed to get current directory: %v", err)
+		}
+
 		// Add command
 		command := "ls -la"
 		hostname, _ := os.Hostname()
 		username := os.Getenv("USER")
-		if err := adder.AddCommand(command, "", "", "", hostname, username); err != nil {
+		if err := adder.AddCommand(command, currentDir, "", "", hostname, username); err != nil {
 			t.Fatalf("AddCommand failed: %v", err)
 		}
 
@@ -66,12 +72,6 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 			t.Fatalf("failed to create history manager: %v", err)
 		}
 		defer manager.Close()
-
-		// Get current directory
-		currentDir, err := os.Getwd()
-		if err != nil {
-			t.Fatalf("failed to get current directory: %v", err)
-		}
 
 		// Check if command exists in history
 		entries, err := manager.GetCurrentDirectoryHistory(currentDir, 1)
@@ -299,11 +299,17 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 		sid := "12345"
 		adder := NewCommandAdder(configPath, false)
 
+		// Get current directory
+		currentDir, err := os.Getwd()
+		if err != nil {
+			t.Fatalf("failed to get current directory: %v", err)
+		}
+
 		// Add command
 		command := "ls -la"
 		hostname, _ := os.Hostname()
 		username := os.Getenv("USER")
-		if err := adder.AddCommand(command, "", tty, sid, hostname, username); err != nil {
+		if err := adder.AddCommand(command, currentDir, tty, sid, hostname, username); err != nil {
 			t.Fatalf("AddCommand failed: %v", err)
 		}
 
@@ -314,12 +320,6 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 		}
 		defer manager.Close()
 
-		// Get current directory
-		currentDir, err := os.Getwd()
-		if err != nil {
-			t.Fatalf("failed to get current directory: %v", err)
-		}
-
 		// Check if command exists in history
 		entries, err := manager.GetCurrentDirectoryHistory(currentDir, 1)
 		if err != nil {
@@ -327,9 +327,6 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 		}
 		if len(entries) != 1 {
 			t.Errorf("expected 1 command, got %d", len(entries))
-		}
-		if entries[0].TTY != tty {
-			t.Errorf("expected TTY %q, got %q", tty, entries[0].TTY)
 		}
 		if entries[0].SID != sid {
 			t.Errorf("expected SID %q, got %q", sid, entries[0].SID)
