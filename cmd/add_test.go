@@ -50,11 +50,11 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 		db.Close()
 
 		// Create CommandAdder
-		adder := NewCommandAdder(configPath, false, "", "")
+		adder := NewCommandAdder(configPath, false)
 
 		// Add command
 		command := "ls -la"
-		if err := adder.AddCommand(command, ""); err != nil {
+		if err := adder.AddCommand(command, "", "", ""); err != nil {
 			t.Fatalf("AddCommand failed: %v", err)
 		}
 
@@ -122,12 +122,12 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 		db.Close()
 
 		// Create CommandAdder
-		adder := NewCommandAdder(configPath, false, "", "")
+		adder := NewCommandAdder(configPath, false)
 
 		// Add command with specified directory
 		command := "ls -la"
 		specifiedDir := "/specified/directory"
-		if err := adder.AddCommand(command, specifiedDir); err != nil {
+		if err := adder.AddCommand(command, specifiedDir, "", ""); err != nil {
 			t.Fatalf("AddCommand failed: %v", err)
 		}
 
@@ -167,10 +167,10 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 		}
 
 		// Create CommandAdder
-		adder := NewCommandAdder(configPath, false, "", "")
+		adder := NewCommandAdder(configPath, false)
 
 		// Try to add empty command
-		err := adder.AddCommand("", "")
+		err := adder.AddCommand("", "", "", "")
 		if err == nil {
 			t.Error("expected error for empty command, got nil")
 		}
@@ -214,7 +214,7 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 		db.Close()
 
 		// Create CommandAdder with verbose mode
-		adder := NewCommandAdder(configPath, true, "", "")
+		adder := NewCommandAdder(configPath, true)
 
 		// Capture stdout
 		oldStdout := os.Stdout
@@ -223,7 +223,7 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 
 		// Add command
 		command := "ls -la"
-		if err := adder.AddCommand(command, ""); err != nil {
+		if err := adder.AddCommand(command, "", "", ""); err != nil {
 			t.Fatalf("AddCommand failed: %v", err)
 		}
 
@@ -243,8 +243,8 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 	})
 
 	t.Run("invalid config path", func(t *testing.T) {
-		adder := NewCommandAdder("nonexistent/config.toml", false, "", "")
-		err := adder.AddCommand("ls", "")
+		adder := NewCommandAdder("nonexistent/config.toml", false)
+		err := adder.AddCommand("ls", "", "", "")
 		if err == nil {
 			t.Error("expected error for invalid config path, got nil")
 		}
@@ -287,11 +287,11 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 		// Create CommandAdder with TTY and SID
 		tty := "/dev/pts/1"
 		sid := "12345"
-		adder := NewCommandAdder(configPath, false, tty, sid)
+		adder := NewCommandAdder(configPath, false)
 
 		// Add command
 		command := "ls -la"
-		if err := adder.AddCommand(command, ""); err != nil {
+		if err := adder.AddCommand(command, "", tty, sid); err != nil {
 			t.Fatalf("AddCommand failed: %v", err)
 		}
 

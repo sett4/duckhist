@@ -23,25 +23,21 @@ var (
 type CommandAdder struct {
 	configPath string
 	verbose    bool
-	tty        string
-	sid        string
 }
 
 // NewCommandAdder creates a new CommandAdder instance
-func NewCommandAdder(configPath string, verbose bool, tty string, sid string) *CommandAdder {
-	if tty == "" {
-		tty = os.Getenv("TTY")
-	}
+func NewCommandAdder(configPath string, verbose bool) *CommandAdder {
 	return &CommandAdder{
 		configPath: configPath,
 		verbose:    verbose,
-		tty:        tty,
-		sid:        sid,
 	}
 }
 
 // AddCommand adds a command to history
-func (ca *CommandAdder) AddCommand(command string, directory string) error {
+func (ca *CommandAdder) AddCommand(command string, directory string, tty string, sid string) error {
+	if tty == "" {
+		tty = os.Getenv("TTY")
+	}
 	command = strings.TrimSpace(command)
 	if command == "" {
 		if ca.verbose {
@@ -70,7 +66,7 @@ func (ca *CommandAdder) AddCommand(command string, directory string) error {
 		directory = dir
 	}
 
-	if err := manager.AddCommand(command, directory, ca.tty, ca.sid); err != nil {
+	if err := manager.AddCommand(command, directory, tty, sid); err != nil {
 		return fmt.Errorf("failed to add command: %w", err)
 	}
 
@@ -88,8 +84,8 @@ var addCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		command := strings.Join(args, " ")
 
-		adder := NewCommandAdder(cfgFile, verbose, tty, sid)
-		if err := adder.AddCommand(command, workingDir); err != nil {
+		adder := NewCommandAdder(cfgFile, verbose)
+		if err := adder.AddCommand(command, workingDir, tty, sid); err != nil {
 			if err.Error() == "empty command" {
 				os.Exit(1)
 			}
