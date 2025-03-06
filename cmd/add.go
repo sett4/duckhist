@@ -34,7 +34,7 @@ func NewCommandAdder(configPath string, verbose bool) *CommandAdder {
 }
 
 // AddCommand adds a command to history
-func (ca *CommandAdder) AddCommand(command string, directory string, tty string, sid string) error {
+func (ca *CommandAdder) AddCommand(command string, directory string, tty string, sid string, hostname string, username string) error {
 	command = strings.TrimSpace(command)
 	if command == "" {
 		if ca.verbose {
@@ -54,7 +54,7 @@ func (ca *CommandAdder) AddCommand(command string, directory string, tty string,
 	}
 	defer manager.Close()
 
-	if err := manager.AddCommand(command, directory, tty, sid); err != nil {
+	if err := manager.AddCommand(command, directory, tty, sid, hostname, username); err != nil {
 		return fmt.Errorf("failed to add command: %w", err)
 	}
 
@@ -76,6 +76,13 @@ var addCmd = &cobra.Command{
 			tty = os.Getenv("TTY")
 		}
 
+		// Get hostname and username
+		hostname, err := os.Hostname()
+		if err != nil {
+			log.Fatalf("failed to get hostname: %v", err)
+		}
+		username := os.Getenv("USER")
+
 		// If directory is not specified, use current directory
 		if workingDir == "" {
 			dir, err := os.Getwd()
@@ -86,7 +93,7 @@ var addCmd = &cobra.Command{
 		}
 
 		adder := NewCommandAdder(cfgFile, verbose)
-		if err := adder.AddCommand(command, workingDir, tty, sid); err != nil {
+		if err := adder.AddCommand(command, workingDir, tty, sid, hostname, username); err != nil {
 			if err.Error() == "empty command" {
 				os.Exit(1)
 			}

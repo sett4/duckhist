@@ -51,10 +51,8 @@ func (m *Manager) Close() error {
 	return m.db.Close()
 }
 
-func (m *Manager) AddCommand(command string, directory string, tty string, sid string) error {
+func (m *Manager) AddCommand(command string, directory string, tty string, sid string, hostname string, username string) error {
 	executedAt := time.Now()
-	executingHost, _ := os.Hostname()
-	executingUser := os.Getenv("USER")
 
 	if directory == "" {
 		var err error
@@ -71,7 +69,7 @@ func (m *Manager) AddCommand(command string, directory string, tty string, sid s
             id, command, executed_at, executing_host, 
             executing_dir, executing_user, tty, sid
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		id, command, executedAt, executingHost, directory, executingUser, tty, sid)
+		id, command, executedAt, hostname, directory, username, tty, sid)
 	return err
 }
 

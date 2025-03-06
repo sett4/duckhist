@@ -54,7 +54,9 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 
 		// Add command
 		command := "ls -la"
-		if err := adder.AddCommand(command, "", "", ""); err != nil {
+		hostname, _ := os.Hostname()
+		username := os.Getenv("USER")
+		if err := adder.AddCommand(command, "", "", "", hostname, username); err != nil {
 			t.Fatalf("AddCommand failed: %v", err)
 		}
 
@@ -127,7 +129,9 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 		// Add command with specified directory
 		command := "ls -la"
 		specifiedDir := "/specified/directory"
-		if err := adder.AddCommand(command, specifiedDir, "", ""); err != nil {
+		hostname, _ := os.Hostname()
+		username := os.Getenv("USER")
+		if err := adder.AddCommand(command, specifiedDir, "", "", hostname, username); err != nil {
 			t.Fatalf("AddCommand failed: %v", err)
 		}
 
@@ -170,7 +174,9 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 		adder := NewCommandAdder(configPath, false)
 
 		// Try to add empty command
-		err := adder.AddCommand("", "", "", "")
+		hostname, _ := os.Hostname()
+		username := os.Getenv("USER")
+		err := adder.AddCommand("", "", "", "", hostname, username)
 		if err == nil {
 			t.Error("expected error for empty command, got nil")
 		}
@@ -223,7 +229,9 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 
 		// Add command
 		command := "ls -la"
-		if err := adder.AddCommand(command, "", "", ""); err != nil {
+		hostname, _ := os.Hostname()
+		username := os.Getenv("USER")
+		if err := adder.AddCommand(command, "", "", "", hostname, username); err != nil {
 			t.Fatalf("AddCommand failed: %v", err)
 		}
 
@@ -244,7 +252,9 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 
 	t.Run("invalid config path", func(t *testing.T) {
 		adder := NewCommandAdder("nonexistent/config.toml", false)
-		err := adder.AddCommand("ls", "", "", "")
+		hostname, _ := os.Hostname()
+		username := os.Getenv("USER")
+		err := adder.AddCommand("ls", "", "", "", hostname, username)
 		if err == nil {
 			t.Error("expected error for invalid config path, got nil")
 		}
@@ -291,7 +301,9 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 
 		// Add command
 		command := "ls -la"
-		if err := adder.AddCommand(command, "", tty, sid); err != nil {
+		hostname, _ := os.Hostname()
+		username := os.Getenv("USER")
+		if err := adder.AddCommand(command, "", tty, sid, hostname, username); err != nil {
 			t.Fatalf("AddCommand failed: %v", err)
 		}
 
