@@ -80,11 +80,6 @@ func (ic *InitConfig) InitializeDatabase() error {
 		return fmt.Errorf("failed to run migrations: %w", err)
 	}
 
-	// Force schema version to the default value (2)
-	if err := ForceSchemaVersion(cfg.DatabasePath, forceVersionTo); err != nil {
-		return fmt.Errorf("failed to force schema version: %w", err)
-	}
-
 	fmt.Printf("Initialized database at: %s\n", cfg.DatabasePath)
 	return nil
 }
