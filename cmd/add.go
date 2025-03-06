@@ -35,9 +35,6 @@ func NewCommandAdder(configPath string, verbose bool) *CommandAdder {
 
 // AddCommand adds a command to history
 func (ca *CommandAdder) AddCommand(command string, directory string, tty string, sid string) error {
-	if tty == "" {
-		tty = os.Getenv("TTY")
-	}
 	command = strings.TrimSpace(command)
 	if command == "" {
 		if ca.verbose {
@@ -57,15 +54,6 @@ func (ca *CommandAdder) AddCommand(command string, directory string, tty string,
 	}
 	defer manager.Close()
 
-	// If directory is not specified, use current directory
-	if directory == "" {
-		dir, err := os.Getwd()
-		if err != nil {
-			return fmt.Errorf("failed to get current directory: %w", err)
-		}
-		directory = dir
-	}
-
 	if err := manager.AddCommand(command, directory, tty, sid); err != nil {
 		return fmt.Errorf("failed to add command: %w", err)
 	}
@@ -83,6 +71,19 @@ var addCmd = &cobra.Command{
 	Long:  `Add a command to the history database. Use -- to separate the command.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		command := strings.Join(args, " ")
+
+		if tty == "" {
+			tty = os.Getenv("TTY")
+		}
+
+		// If directory is not specified, use current directory
+		if workingDir == "" {
+			dir, err := os.Getwd()
+			if err != nil {
+				log.Fatalf("failed to get current directory: %v", err)
+			}
+			workingDir = dir
+		}
 
 		adder := NewCommandAdder(cfgFile, verbose)
 		if err := adder.AddCommand(command, workingDir, tty, sid); err != nil {
