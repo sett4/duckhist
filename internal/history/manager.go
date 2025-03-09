@@ -5,6 +5,7 @@ import (
 	"duckhist/internal/migrate"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -25,6 +26,90 @@ type Entry struct {
 
 type Manager struct {
 	db *sql.DB
+}
+
+type HistoryQuery struct {
+	manager    *Manager
+	conditions []string
+	args       []interface{}
+	orderBy    string
+	limit      *int
+}
+
+// Query creates a new HistoryQuery for building database queries
+func (m *Manager) Query() *HistoryQuery {
+	return &HistoryQuery{
+		manager: m,
+		orderBy: "id DESC",
+	}
+}
+
+// InDirectory adds a condition to filter entries in the specified directory
+func (q *HistoryQuery) InDirectory(dir string) *HistoryQuery {
+	q.conditions = append(q.conditions, "executing_dir = ?")
+	q.args = append(q.args, dir)
+	return q
+}
+
+// NotInDirectory adds a condition to filter entries not in the specified directory
+func (q *HistoryQuery) NotInDirectory(dir string) *HistoryQuery {
+	q.conditions = append(q.conditions, "executing_dir != ?")
+	q.args = append(q.args, dir)
+	return q
+}
+
+// Search adds a condition to filter entries containing the search term
+func (q *HistoryQuery) Search(term string) *HistoryQuery {
+	q.conditions = append(q.conditions, "command LIKE ?")
+	q.args = append(q.args, fmt.Sprintf("%%%s%%", term))
+	return q
+}
+
+// Limit sets the maximum number of entries to return
+func (q *HistoryQuery) Limit(n int) *HistoryQuery {
+	q.limit = &n
+	return q
+}
+
+// OrderByCurrentDirFirst sets the order to prioritize entries from the specified directory
+func (q *HistoryQuery) OrderByCurrentDirFirst(dir string) *HistoryQuery {
+	q.orderBy = "CASE WHEN executing_dir = ? THEN 0 ELSE 1 END, id DESC"
+	q.args = append(q.args, dir)
+	return q
+}
+
+// GetEntries executes the query and returns the matching entries
+func (q *HistoryQuery) GetEntries() ([]Entry, error) {
+	query := "SELECT id, command, executed_at, executing_host, executing_dir, executing_user, tty, sid FROM history"
+
+	if len(q.conditions) > 0 {
+		query += " WHERE " + strings.Join(q.conditions, " AND ")
+	}
+
+	query += " ORDER BY " + q.orderBy
+
+	if q.limit != nil {
+		query += " LIMIT ?"
+		q.args = append(q.args, *q.limit)
+	}
+
+	rows, err := q.manager.db.Query(query, q.args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries []Entry
+	for rows.Next() {
+		var entry Entry
+		err := rows.Scan(&entry.ID, &entry.Command, &entry.Timestamp, &entry.Hostname, &entry.Directory, &entry.Username, &entry.TTY, &entry.SID)
+		if err != nil {
+			return nil, err
+		}
+		entries = append(entries, entry)
+	}
+
+	return entries, rows.Err()
 }
 
 // checkSchemaVersion checks if the database schema version matches the required version
@@ -131,108 +216,33 @@ func (m *Manager) AddCommand(command string, directory string, tty string, sid s
 }
 
 func (m *Manager) ListCommands() ([]string, error) {
-	rows, err := m.db.Query(`SELECT command FROM history ORDER BY id DESC`)
+	entries, err := m.Query().GetEntries()
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	var commands []string
-	for rows.Next() {
-		var command string
-		if err := rows.Scan(&command); err != nil {
-			return nil, err
-		}
-		commands = append(commands, command)
+	commands := make([]string, len(entries))
+	for i, entry := range entries {
+		commands[i] = entry.Command
 	}
 
-	return commands, rows.Err()
+	return commands, nil
 }
 
 // GetCurrentDirectoryHistory retrieves the last n commands executed in the current directory
 func (m *Manager) GetCurrentDirectoryHistory(currentDir string, limit int) ([]Entry, error) {
-	query := `
-		SELECT id, command, executed_at, executing_host, executing_dir, executing_user, tty, sid
-		FROM history
-		WHERE executing_dir = ?
-		ORDER BY id DESC
-		LIMIT ?
-	`
-
-	rows, err := m.db.Query(query, currentDir, limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var entries []Entry
-	for rows.Next() {
-		var entry Entry
-		err := rows.Scan(&entry.ID, &entry.Command, &entry.Timestamp, &entry.Hostname, &entry.Directory, &entry.Username, &entry.TTY, &entry.SID)
-		if err != nil {
-			return nil, err
-		}
-		entries = append(entries, entry)
-	}
-
-	return entries, rows.Err()
-}
-
-// GetFullHistory retrieves all commands excluding those from the current directory
-func (m *Manager) GetFullHistory(currentDir string) ([]Entry, error) {
-	query := `
-		SELECT id, command, executed_at, executing_host, executing_dir, executing_user, tty, sid
-		FROM history
-		WHERE executing_dir != ?
-		ORDER BY id DESC
-	`
-
-	rows, err := m.db.Query(query, currentDir)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var entries []Entry
-	for rows.Next() {
-		var entry Entry
-		err := rows.Scan(&entry.ID, &entry.Command, &entry.Timestamp, &entry.Hostname, &entry.Directory, &entry.Username, &entry.TTY, &entry.SID)
-		if err != nil {
-			return nil, err
-		}
-		entries = append(entries, entry)
-	}
-
-	return entries, rows.Err()
+	return m.Query().
+		InDirectory(currentDir).
+		Limit(limit).
+		OrderByCurrentDirFirst(currentDir).
+		GetEntries()
 }
 
 // GetAllHistory retrieves all commands with current directory entries first
 func (m *Manager) GetAllHistory(currentDir string) ([]Entry, error) {
-	query := `
-		SELECT id, command, executed_at, executing_host, executing_dir, executing_user, tty, sid
-		FROM history
-		ORDER BY 
-			CASE WHEN executing_dir = ? THEN 0 ELSE 1 END,
-			id DESC
-	`
-
-	rows, err := m.db.Query(query, currentDir)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var entries []Entry
-	for rows.Next() {
-		var entry Entry
-		err := rows.Scan(&entry.ID, &entry.Command, &entry.Timestamp, &entry.Hostname, &entry.Directory, &entry.Username, &entry.TTY, &entry.SID)
-		if err != nil {
-			return nil, err
-		}
-		entries = append(entries, entry)
-	}
-
-	return entries, rows.Err()
+	return m.Query().
+		OrderByCurrentDirFirst(currentDir).
+		GetEntries()
 }
 
 // SearchCommands searches for commands matching the given query
@@ -243,31 +253,8 @@ func (m *Manager) SearchCommands(query string, currentDir string) ([]Entry, erro
 		return m.GetAllHistory(currentDir)
 	}
 
-	searchQuery := fmt.Sprintf("%%%s%%", query)
-	sqlQuery := `
-		SELECT id, command, executed_at, executing_host, executing_dir, executing_user, tty, sid
-		FROM history
-		WHERE command LIKE ?
-		ORDER BY 
-			CASE WHEN executing_dir = ? THEN 0 ELSE 1 END,
-			id DESC
-	`
-
-	rows, err := m.db.Query(sqlQuery, searchQuery, currentDir)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var entries []Entry
-	for rows.Next() {
-		var entry Entry
-		err := rows.Scan(&entry.ID, &entry.Command, &entry.Timestamp, &entry.Hostname, &entry.Directory, &entry.Username, &entry.TTY, &entry.SID)
-		if err != nil {
-			return nil, err
-		}
-		entries = append(entries, entry)
-	}
-
-	return entries, rows.Err()
+	return m.Query().
+		Search(query).
+		OrderByCurrentDirFirst(currentDir).
+		GetEntries()
 }

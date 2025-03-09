@@ -58,7 +58,7 @@ func runHistory(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get full history excluding current directory entries
-	fullHistory, err := manager.GetFullHistory(currentDir)
+	fullHistory, err := manager.GetAllHistory(currentDir)
 	if err != nil {
 		return fmt.Errorf("failed to get full history: %w", err)
 	}

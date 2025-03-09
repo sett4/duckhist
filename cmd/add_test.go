@@ -402,7 +402,7 @@ func TestAddCmd_TTY(t *testing.T) {
 		}
 		defer manager.Close()
 
-		list, err := manager.GetFullHistory("")
+		list, err := manager.GetAllHistory("")
 		if len(list) != 1 {
 			t.Errorf("failed to execute add command: %v", list)
 		}

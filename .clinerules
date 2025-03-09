@@ -11,7 +11,7 @@
 ## 設計に関して
 
 全体概要は docs/overview.md を参照してください。
-各サブコマンドの詳細に関しては docs/$subcommand.md を参照してください。
+各サブコマンドの詳細に関しては docs/subcommand_$subcommand.md を参照してください。
 
 
 ## プログラム内のコメントとメッセージに関して
