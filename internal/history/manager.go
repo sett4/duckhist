@@ -74,26 +74,60 @@ func (m *Manager) Close() error {
 	return m.db.Close()
 }
 
-func (m *Manager) AddCommand(command string, directory string, tty string, sid string, hostname string, username string) error {
+// isDuplicate checks if the command already exists in the same context
+func (m *Manager) isDuplicate(command string, directory string, hostname string, username string) (bool, error) {
+	var count int
+	err := m.db.QueryRow(`
+		SELECT COUNT(*)
+		FROM history
+		WHERE command = ?
+		AND executing_dir = ?
+		AND executing_host = ?
+		AND executing_user = ?`,
+		command, directory, hostname, username).Scan(&count)
+
+	if err != nil {
+		return false, fmt.Errorf("failed to check for duplicate: %w", err)
+	}
+
+	return count > 0, nil
+}
+
+func (m *Manager) AddCommand(command string, directory string, tty string, sid string, hostname string, username string, noDedup bool) (bool, error) {
 	executedAt := time.Now()
 
 	if directory == "" {
 		var err error
 		directory, err = os.Getwd()
 		if err != nil {
-			return fmt.Errorf("failed to get current directory: %w", err)
+			return false, fmt.Errorf("failed to get current directory: %w", err)
+		}
+	}
+
+	var isDup bool
+	var err error
+
+	if !noDedup {
+		// Check for duplicates
+		isDup, err = m.isDuplicate(command, directory, hostname, username)
+		if err != nil {
+			return false, err
+		}
+
+		if isDup {
+			return true, nil
 		}
 	}
 
 	id := uuid.Must(uuid.FromBytes(ulid.Make().Bytes()))
 
-	_, err := m.db.Exec(`
+	_, err = m.db.Exec(`
         INSERT INTO history (
             id, command, executed_at, executing_host, 
             executing_dir, executing_user, tty, sid
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 		id, command, executedAt, hostname, directory, username, tty, sid)
-	return err
+	return false, err
 }
 
 func (m *Manager) ListCommands() ([]string, error) {

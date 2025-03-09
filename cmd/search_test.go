@@ -62,8 +62,12 @@ current_directory_history_limit = 5
 	}
 
 	for _, tc := range testCommands {
-		if err := manager.AddCommand(tc.command, tc.directory, "", "", "localhost", "testuser"); err != nil {
+		isDup, err := manager.AddCommand(tc.command, tc.directory, "", "", "localhost", "testuser", false)
+		if err != nil {
 			t.Fatalf("Failed to add command: %v", err)
+		}
+		if isDup {
+			t.Errorf("Expected command not to be duplicate: %s", tc.command)
 		}
 	}
 	manager.Close()

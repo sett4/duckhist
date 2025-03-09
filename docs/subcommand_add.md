@@ -16,6 +16,7 @@ The `--` separator is required to prevent flags in the command from being interp
 - `--directory, -d`: Specify the directory to record (defaults to current directory)
 - `--tty`: Specify the TTY (defaults to $TTY environment variable)
 - `--sid`: Specify the Session ID
+- `--no-dedup`: Allow duplicate commands (by default, duplicate commands are skipped)
 
 ## Implementation Details
 
@@ -34,6 +35,22 @@ The `--` separator is required to prevent flags in the command from being interp
    - Session ID: Uses the specified SID
    - Hostname: Automatically retrieved from the system
    - Username: Retrieved from the USER environment variable
+
+### Deduplication
+
+By default, the add subcommand will skip duplicate commands in the same context (same directory, hostname, and username). This helps keep the history clean and avoids redundant entries. A command is considered a duplicate if:
+
+- The command text is exactly the same
+- It was executed in the same directory
+- It was executed on the same host
+- It was executed by the same user
+
+You can override this behavior with the `--no-dedup` flag to force adding duplicate commands.
+
+When using verbose mode (`-v`):
+
+- Skipped duplicates will show: "Skipping duplicate command: [command]"
+- Forced duplicates will show: "Adding duplicate command: [command]"
 
 ### Error Handling
 

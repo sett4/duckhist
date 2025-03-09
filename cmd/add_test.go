@@ -44,8 +44,12 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 		command := "ls -la"
 		hostname, _ := os.Hostname()
 		username := os.Getenv("USER")
-		if err := adder.AddCommand(command, currentDir, "", "", hostname, username); err != nil {
+		isDup, err := adder.AddCommand(command, currentDir, "", "", hostname, username, false)
+		if err != nil {
 			t.Fatalf("AddCommand failed: %v", err)
+		}
+		if isDup {
+			t.Error("expected command to not be duplicate")
 		}
 
 		// Verify command was added
@@ -96,8 +100,12 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 		specifiedDir := "/specified/directory"
 		hostname, _ := os.Hostname()
 		username := os.Getenv("USER")
-		if err := adder.AddCommand(command, specifiedDir, "", "", hostname, username); err != nil {
+		isDup, err := adder.AddCommand(command, specifiedDir, "", "", hostname, username, false)
+		if err != nil {
 			t.Fatalf("AddCommand failed: %v", err)
+		}
+		if isDup {
+			t.Error("expected command to not be duplicate")
 		}
 
 		// Verify command was added
@@ -123,6 +131,75 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 		}
 	})
 
+	t.Run("duplicate command", func(t *testing.T) {
+		// Create temporary directory for test
+		tmpDir := t.TempDir()
+
+		// Create config file
+		configPath := filepath.Join(tmpDir, "config.toml")
+		dbPath := filepath.Join(tmpDir, "test.duckdb")
+		content := fmt.Sprintf("database_path = %q", dbPath)
+		if err := os.WriteFile(configPath, []byte(content), 0644); err != nil {
+			t.Fatalf("failed to create config file: %v", err)
+		}
+
+		// Run migrations to initialize database schema
+		if err := RunMigrations(dbPath); err != nil {
+			t.Fatalf("failed to run migrations: %v", err)
+		}
+
+		// Create CommandAdder
+		adder := NewCommandAdder(configPath, false)
+
+		// Get current directory
+		currentDir, err := os.Getwd()
+		if err != nil {
+			t.Fatalf("failed to get current directory: %v", err)
+		}
+
+		// Add command first time
+		command := "ls -la"
+		hostname, _ := os.Hostname()
+		username := os.Getenv("USER")
+		isDup, err := adder.AddCommand(command, currentDir, "", "", hostname, username, false)
+		if err != nil {
+			t.Fatalf("First AddCommand failed: %v", err)
+		}
+		if isDup {
+			t.Error("expected first command to not be duplicate")
+		}
+
+		// Try to add the same command again
+		isDup, err = adder.AddCommand(command, currentDir, "", "", hostname, username, false)
+		if err != nil {
+			t.Fatalf("Second AddCommand failed: %v", err)
+		}
+		if !isDup {
+			t.Error("expected second command to be duplicate")
+		}
+
+		// Try to add the same command again with noDedup=true
+		isDup, err = adder.AddCommand(command, currentDir, "", "", hostname, username, true)
+		if err != nil {
+			t.Fatalf("Third AddCommand failed: %v", err)
+		}
+
+		// Verify commands were added
+		manager, err := history.NewManagerReadWrite(dbPath)
+		if err != nil {
+			t.Fatalf("failed to create history manager: %v", err)
+		}
+		defer manager.Close()
+
+		entries, err := manager.GetCurrentDirectoryHistory(currentDir, 10)
+		if err != nil {
+			t.Fatalf("failed to get commands: %v", err)
+		}
+		if len(entries) != 2 {
+			t.Errorf("expected 2 commands, got %d", len(entries))
+		}
+	})
+
 	t.Run("empty command", func(t *testing.T) {
 		// Create temporary directory for test
 		tmpDir := t.TempDir()
@@ -141,12 +218,15 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 		// Try to add empty command
 		hostname, _ := os.Hostname()
 		username := os.Getenv("USER")
-		err := adder.AddCommand("", "", "", "", hostname, username)
+		isDup, err := adder.AddCommand("", "", "", "", hostname, username, false)
 		if err == nil {
 			t.Error("expected error for empty command, got nil")
 		}
 		if err.Error() != "empty command" {
 			t.Errorf("expected error message %q, got %q", "empty command", err.Error())
+		}
+		if isDup {
+			t.Error("expected empty command to not be marked as duplicate")
 		}
 	})
 
@@ -179,8 +259,12 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 		command := "ls -la"
 		hostname, _ := os.Hostname()
 		username := os.Getenv("USER")
-		if err := adder.AddCommand(command, "", "", "", hostname, username); err != nil {
+		isDup, err := adder.AddCommand(command, "", "", "", hostname, username, false)
+		if err != nil {
 			t.Fatalf("AddCommand failed: %v", err)
+		}
+		if isDup {
+			t.Error("expected command to not be duplicate")
 		}
 
 		// Restore stdout
@@ -202,7 +286,7 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 		adder := NewCommandAdder("nonexistent/config.toml", false)
 		hostname, _ := os.Hostname()
 		username := os.Getenv("USER")
-		err := adder.AddCommand("ls", "", "", "", hostname, username)
+		_, err := adder.AddCommand("ls", "", "", "", hostname, username, false)
 		if err == nil {
 			t.Error("expected error for invalid config path, got nil")
 		}
@@ -240,8 +324,12 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 		command := "ls -la"
 		hostname, _ := os.Hostname()
 		username := os.Getenv("USER")
-		if err := adder.AddCommand(command, currentDir, tty, sid, hostname, username); err != nil {
+		isDup, err := adder.AddCommand(command, currentDir, tty, sid, hostname, username, false)
+		if err != nil {
 			t.Fatalf("AddCommand failed: %v", err)
+		}
+		if isDup {
+			t.Error("expected command to not be duplicate")
 		}
 
 		// Verify command was added
@@ -322,38 +410,4 @@ func TestAddCmd_TTY(t *testing.T) {
 			t.Errorf("unexpected tty: %s", list[0].TTY)
 		}
 	})
-
-	// t.Run("TTY from arg", func(t *testing.T) {
-	// 	// Set environment variable
-	// 	envTTY := "/dev/pts/test1"
-	// 	os.Setenv("TTY", envTTY)
-	// 	argTTY := "/dev/pts/testA"
-
-	// 	// Reset global variables
-	// 	tty = ""
-	// 	cfgFile = configPath
-
-	// 	rootCmd.SetArgs([]string{"add", "--config", cfgFile, "--tty", argTTY, "--", "hogehoge2"})
-	// 	if err := rootCmd.Execute(); err != nil {
-	// 		t.Errorf("failed to execute add command: %v", err)
-	// 	}
-
-	// 	// Create history manager
-	// 	manager, err := history.NewManagerReadOnly(dbPath)
-	// 	if err != nil {
-	// 		t.Fatalf("failed to create history manager: %v", err)
-	// 	}
-	// 	defer manager.Close()
-
-	// 	list, err := manager.GetFullHistory("")
-	// 	// fmt.Println(list)
-	// 	if len(list) != 1 {
-	// 		t.Errorf("failed to execute add command: %v", list)
-	// 	}
-	// 	if list[0].TTY != argTTY {
-	// 		t.Errorf("unexpected tty: %s", list[0].TTY)
-	// 	}
-
-	// })
-
 }
