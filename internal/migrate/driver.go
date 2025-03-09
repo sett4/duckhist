@@ -174,7 +174,6 @@ var ii = 0
 
 // SetVersion sets the current migration version
 func (d *DuckDB) SetVersion(version int, dirty bool) error {
-	fmt.Println("version", version, "dirty", dirty)
 	_, err := d.db.Exec("INSERT INTO schema_migrations (version, dirty, applied_at) VALUES (?, ?, now()) ON CONFLICT DO UPDATE SET dirty = EXCLUDED.dirty, applied_at = now()", version, dirty)
 	return err
 }

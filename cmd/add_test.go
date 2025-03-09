@@ -264,3 +264,96 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 		}
 	})
 }
+
+func TestAddCmd_TTY(t *testing.T) {
+	// Create temporary directory for test
+	tmpDir := t.TempDir()
+
+	// Create config file
+	configPath := filepath.Join(tmpDir, "config.toml")
+	dbPath := filepath.Join(tmpDir, "test.duckdb")
+	content := fmt.Sprintf("database_path = %q", dbPath)
+	if err := os.WriteFile(configPath, []byte(content), 0644); err != nil {
+		t.Fatalf("failed to create config file: %v", err)
+	}
+
+	// Run migrations to initialize database schema
+	if err := RunMigrations(dbPath); err != nil {
+		t.Fatalf("failed to run migrations: %v", err)
+	}
+
+	// Save original environment and config
+	originalTTY := os.Getenv("TTY")
+	originalCfgFile := cfgFile
+	defer func() {
+		os.Setenv("TTY", originalTTY)
+		cfgFile = originalCfgFile
+	}()
+
+	rootCmd.ResetCommands()
+	rootCmd.AddCommand(addCmd)
+
+	t.Run("TTY from env", func(t *testing.T) {
+		// Set environment variable
+		envTTY := "/dev/pts/test1"
+		os.Setenv("TTY", envTTY)
+
+		// Reset global variables
+		tty = ""
+		cfgFile = configPath
+
+		rootCmd.SetArgs([]string{"add", "--config", cfgFile, "--", "hogehoge1"})
+		if err := rootCmd.Execute(); err != nil {
+			t.Errorf("failed to execute add command: %v", err)
+		}
+
+		// Create history manager
+		manager, err := history.NewManagerReadOnly(dbPath)
+		if err != nil {
+			t.Fatalf("failed to create history manager: %v", err)
+		}
+		defer manager.Close()
+
+		list, err := manager.GetFullHistory("")
+		if len(list) != 1 {
+			t.Errorf("failed to execute add command: %v", list)
+		}
+		if list[0].TTY != envTTY {
+			t.Errorf("unexpected tty: %s", list[0].TTY)
+		}
+	})
+
+	// t.Run("TTY from arg", func(t *testing.T) {
+	// 	// Set environment variable
+	// 	envTTY := "/dev/pts/test1"
+	// 	os.Setenv("TTY", envTTY)
+	// 	argTTY := "/dev/pts/testA"
+
+	// 	// Reset global variables
+	// 	tty = ""
+	// 	cfgFile = configPath
+
+	// 	rootCmd.SetArgs([]string{"add", "--config", cfgFile, "--tty", argTTY, "--", "hogehoge2"})
+	// 	if err := rootCmd.Execute(); err != nil {
+	// 		t.Errorf("failed to execute add command: %v", err)
+	// 	}
+
+	// 	// Create history manager
+	// 	manager, err := history.NewManagerReadOnly(dbPath)
+	// 	if err != nil {
+	// 		t.Fatalf("failed to create history manager: %v", err)
+	// 	}
+	// 	defer manager.Close()
+
+	// 	list, err := manager.GetFullHistory("")
+	// 	// fmt.Println(list)
+	// 	if len(list) != 1 {
+	// 		t.Errorf("failed to execute add command: %v", list)
+	// 	}
+	// 	if list[0].TTY != argTTY {
+	// 		t.Errorf("unexpected tty: %s", list[0].TTY)
+	// 	}
+
+	// })
+
+}

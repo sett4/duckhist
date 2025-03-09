@@ -21,15 +21,15 @@ var (
 
 // CommandAdder handles adding commands to history
 type CommandAdder struct {
-	configPath string
-	verbose    bool
+	config  string
+	verbose bool
 }
 
 // NewCommandAdder creates a new CommandAdder instance
-func NewCommandAdder(configPath string, verbose bool) *CommandAdder {
+func NewCommandAdder(config string, verbose bool) *CommandAdder {
 	return &CommandAdder{
-		configPath: configPath,
-		verbose:    verbose,
+		config:  config,
+		verbose: verbose,
 	}
 }
 
@@ -43,10 +43,15 @@ func (ca *CommandAdder) AddCommand(command string, directory string, tty string,
 		return fmt.Errorf("empty command")
 	}
 
-	cfg, err := config.LoadConfig(ca.configPath)
+	cfg, err := config.LoadConfig(ca.config)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
+
+	// if ca.verbose {
+	// 	fmt.Printf("config_path: %s\n", ca.config)
+	// 	fmt.Printf("database_path: %s\n", cfg.DatabasePath)
+	// }
 
 	manager, err := history.NewManagerReadWrite(cfg.DatabasePath)
 	if err != nil {
@@ -72,10 +77,6 @@ var addCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		command := strings.Join(args, " ")
 
-		if tty == "" {
-			tty = os.Getenv("TTY")
-		}
-
 		// Get hostname and username
 		hostname, err := os.Hostname()
 		if err != nil {
@@ -90,6 +91,10 @@ var addCmd = &cobra.Command{
 				log.Fatalf("failed to get current directory: %v", err)
 			}
 			workingDir = dir
+		}
+
+		if tty == "" {
+			tty = os.Getenv("TTY")
 		}
 
 		adder := NewCommandAdder(cfgFile, verbose)
