@@ -6,6 +6,8 @@ toolchain go1.24.0
 
 require (
 	github.com/apache/arrow-go/v18 v18.1.0 // indirect
+	github.com/damiendart/pathshorten v0.0.0-20241227143450-a21e3f098e78 // indirect
+	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/gdamore/encoding v1.0.1 // indirect
 	github.com/gdamore/tcell/v2 v2.8.1 // indirect

@@ -7,6 +7,8 @@ import (
 	"duckhist/internal/config"
 	"duckhist/internal/history"
 
+	"github.com/damiendart/pathshorten"
+	"github.com/dustin/go-humanize"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"github.com/spf13/cobra"
@@ -63,26 +65,35 @@ func runSearch(cmd *cobra.Command, args []string) error {
 	// Create application
 	app := tview.NewApplication()
 
-	// Create list view for displaying commands
-	list := tview.NewList().
-		ShowSecondaryText(false).
-		SetHighlightFullLine(true).
-		SetWrapAround(true)
+	// Create table view for displaying commands
+	table := tview.NewTable().
+		SetSelectable(true, false).
+		SetFixed(1, 0).
+		SetBorders(false)
+
+	// Set table headers
+	table.SetCell(0, 0, tview.NewTableCell("Date").SetSelectable(false))
+	table.SetCell(0, 1, tview.NewTableCell("Directory").SetSelectable(false))
+	table.SetCell(0, 2, tview.NewTableCell("Command").SetSelectable(false))
 
 	// Create input field for search
 	input := tview.NewInputField().
 		SetLabel("Search: ").
 		SetFieldWidth(0)
 
-	// Create layout with list on top and input at bottom
+	// Create layout with table on top and input at bottom
 	flex := tview.NewFlex().
 		SetDirection(tview.FlexRow).
-		AddItem(list, 0, 1, false).
+		AddItem(table, 0, 1, false).
 		AddItem(input, 1, 0, true)
 
-	// Function to update list based on search query
-	updateList := func(query string) {
-		list.Clear()
+	// Function to update table based on search query
+	updateTable := func(query string) {
+		// Clear table except headers
+		table.Clear()
+		table.SetCell(0, 0, tview.NewTableCell("Date").SetSelectable(false))
+		table.SetCell(0, 1, tview.NewTableCell("Directory").SetSelectable(false))
+		table.SetCell(0, 2, tview.NewTableCell("Command").SetSelectable(false))
 
 		var entries []history.Entry
 		var err error
@@ -97,21 +108,34 @@ func runSearch(cmd *cobra.Command, args []string) error {
 			}
 		}
 
-		for i, entry := range entries {
-			list.AddItem(entry.Command, "", rune('a'+i%26), nil)
+		// Add items in reverse order so that newer commands appear at the bottom
+		for i := len(entries) - 1; i >= 0; i-- {
+			entry := entries[i]
+			row := len(entries) - i // Account for header row
+
+			// Format date as relative time
+			dateStr := humanize.Time(entry.Timestamp)
+
+			// Shorten directory
+			dir := pathshorten.PathShorten(entry.Directory, "/", 20)
+
+			// Add cells to the row
+			table.SetCell(row, 0, tview.NewTableCell(dateStr))
+			table.SetCell(row, 1, tview.NewTableCell(dir))
+			table.SetCell(row, 2, tview.NewTableCell(entry.Command))
 		}
 
-		if list.GetItemCount() > 0 {
-			list.SetCurrentItem(0)
+		if table.GetRowCount() > 1 {
+			table.Select(1, 0) // Select first row after header
 		}
 	}
 
-	// Initial population of the list
-	updateList("")
+	// Initial population of the table
+	updateTable("")
 
 	// Handle input changes
 	input.SetChangedFunc(func(text string) {
-		updateList(text)
+		updateTable(text)
 	})
 
 	// Set up key handling
@@ -119,12 +143,9 @@ func runSearch(cmd *cobra.Command, args []string) error {
 		switch event.Key() {
 		case tcell.KeyTab, tcell.KeyEnter:
 			// Output selected command and exit
-			if list.GetItemCount() > 0 {
-				_, command := list.GetItemText(list.GetCurrentItem())
-				if command == "" {
-					// If secondary text is empty, use primary text
-					command, _ = list.GetItemText(list.GetCurrentItem())
-				}
+			if table.GetRowCount() > 1 {
+				row, _ := table.GetSelection()
+				command := table.GetCell(row, 2).Text // Get command from third column
 				app.Stop()
 				fmt.Println(command)
 			}
@@ -135,16 +156,16 @@ func runSearch(cmd *cobra.Command, args []string) error {
 			return nil
 		case tcell.KeyUp:
 			// Move selection up
-			current := list.GetCurrentItem()
-			if current > 0 {
-				list.SetCurrentItem(current - 1)
+			row, _ := table.GetSelection()
+			if row > 1 { // Don't select header row
+				table.Select(row-1, 0)
 			}
 			return nil
 		case tcell.KeyDown:
 			// Move selection down
-			current := list.GetCurrentItem()
-			if current < list.GetItemCount()-1 {
-				list.SetCurrentItem(current + 1)
+			row, _ := table.GetSelection()
+			if row < table.GetRowCount()-1 {
+				table.Select(row+1, 0)
 			}
 			return nil
 		}
