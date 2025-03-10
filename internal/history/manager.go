@@ -229,28 +229,22 @@ func (m *Manager) ListCommands() ([]string, error) {
 	return commands, nil
 }
 
-// GetCurrentDirectoryHistory retrieves the last n commands executed in the current directory
-func (m *Manager) GetCurrentDirectoryHistory(currentDir string, limit int) ([]Entry, error) {
-	return m.Query().
-		InDirectory(currentDir).
-		Limit(limit).
-		OrderByCurrentDirFirst(currentDir).
-		GetEntries()
+// FindHistory retrieves commands with current directory entries first
+// If limit is provided, returns only that many entries
+func (m *Manager) FindHistory(currentDir string, limit *int) ([]Entry, error) {
+	q := m.Query().OrderByCurrentDirFirst(currentDir)
+	if limit != nil {
+		q.Limit(*limit)
+	}
+	return q.GetEntries()
 }
 
-// GetAllHistory retrieves all commands with current directory entries first
-func (m *Manager) GetAllHistory(currentDir string) ([]Entry, error) {
-	return m.Query().
-		OrderByCurrentDirFirst(currentDir).
-		GetEntries()
-}
-
-// SearchCommands searches for commands matching the given query
+// FindByCommand searches for commands matching the given query
 // If query is empty, returns all commands
 // Results are ordered with current directory entries first
-func (m *Manager) SearchCommands(query string, currentDir string) ([]Entry, error) {
+func (m *Manager) FindByCommand(query string, currentDir string) ([]Entry, error) {
 	if query == "" {
-		return m.GetAllHistory(currentDir)
+		return m.FindHistory(currentDir, nil)
 	}
 
 	return m.Query().

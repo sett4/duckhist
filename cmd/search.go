@@ -55,7 +55,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get initial history (all commands)
-	allHistory, err := manager.GetAllHistory(currentDir)
+	allHistory, err := manager.FindHistory(currentDir, nil)
 	if err != nil {
 		return fmt.Errorf("failed to get history: %w", err)
 	}
@@ -90,7 +90,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 		if query == "" {
 			entries = allHistory
 		} else {
-			entries, err = manager.SearchCommands(query, currentDir)
+			entries, err = manager.FindByCommand(query, currentDir)
 			if err != nil {
 				// Just use empty list if there's an error
 				entries = []history.Entry{}

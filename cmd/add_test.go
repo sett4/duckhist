@@ -60,7 +60,7 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 		defer manager.Close()
 
 		// Check if command exists in history
-		entries, err := manager.GetCurrentDirectoryHistory(currentDir, 1)
+		entries, err := manager.Query().InDirectory(currentDir).Limit(1).OrderByCurrentDirFirst(currentDir).GetEntries()
 		if err != nil {
 			t.Fatalf("failed to get commands: %v", err)
 		}
@@ -116,7 +116,7 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 		defer manager.Close()
 
 		// Check if command exists in history
-		entries, err := manager.GetCurrentDirectoryHistory(specifiedDir, 1)
+		entries, err := manager.Query().InDirectory(specifiedDir).Limit(1).OrderByCurrentDirFirst(specifiedDir).GetEntries()
 		if err != nil {
 			t.Fatalf("failed to get commands: %v", err)
 		}
@@ -191,7 +191,7 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 		}
 		defer manager.Close()
 
-		entries, err := manager.GetCurrentDirectoryHistory(currentDir, 10)
+		entries, err := manager.Query().InDirectory(currentDir).Limit(10).OrderByCurrentDirFirst(currentDir).GetEntries()
 		if err != nil {
 			t.Fatalf("failed to get commands: %v", err)
 		}
@@ -340,7 +340,7 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 		defer manager.Close()
 
 		// Check if command exists in history
-		entries, err := manager.GetCurrentDirectoryHistory(currentDir, 1)
+		entries, err := manager.Query().InDirectory(currentDir).Limit(1).OrderByCurrentDirFirst(currentDir).GetEntries()
 		if err != nil {
 			t.Fatalf("failed to get commands: %v", err)
 		}
@@ -402,7 +402,7 @@ func TestAddCmd_TTY(t *testing.T) {
 		}
 		defer manager.Close()
 
-		list, err := manager.GetAllHistory("")
+		list, err := manager.FindHistory("", nil)
 		if len(list) != 1 {
 			t.Errorf("failed to execute add command: %v", list)
 		}

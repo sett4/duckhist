@@ -52,13 +52,18 @@ func runHistory(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get current directory history
-	currentDirHistory, err := manager.GetCurrentDirectoryHistory(currentDir, cfg.CurrentDirectoryHistLimit)
+	limit := cfg.CurrentDirectoryHistLimit
+	currentDirHistory, err := manager.Query().
+		InDirectory(currentDir).
+		Limit(limit).
+		OrderByCurrentDirFirst(currentDir).
+		GetEntries()
 	if err != nil {
 		return fmt.Errorf("failed to get current directory history: %w", err)
 	}
 
 	// Get full history excluding current directory entries
-	fullHistory, err := manager.GetAllHistory(currentDir)
+	fullHistory, err := manager.FindHistory(currentDir, nil)
 	if err != nil {
 		return fmt.Errorf("failed to get full history: %w", err)
 	}

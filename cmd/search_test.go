@@ -77,7 +77,7 @@ current_directory_history_limit = 5
 	// but we can verify that the command doesn't error out
 	// and that the database queries work correctly
 
-	// Test that the SearchCommands method works
+	// Test that the FindByCommand method works
 	manager, err = history.NewManagerReadOnly(dbPath)
 	if err != nil {
 		t.Fatalf("Failed to create history manager: %v", err)
@@ -85,18 +85,18 @@ current_directory_history_limit = 5
 	defer manager.Close()
 
 	// Test empty query (should return all commands)
-	results, err := manager.SearchCommands("", currentDir)
+	results, err := manager.FindByCommand("", currentDir)
 	if err != nil {
-		t.Fatalf("SearchCommands failed: %v", err)
+		t.Fatalf("FindByCommand failed: %v", err)
 	}
 	if len(results) != len(testCommands) {
 		t.Errorf("Expected %d results, got %d", len(testCommands), len(results))
 	}
 
 	// Test specific query
-	results, err = manager.SearchCommands("git", currentDir)
+	results, err = manager.FindByCommand("git", currentDir)
 	if err != nil {
-		t.Fatalf("SearchCommands failed: %v", err)
+		t.Fatalf("FindByCommand failed: %v", err)
 	}
 	if len(results) != 1 {
 		t.Errorf("Expected 1 result, got %d", len(results))
@@ -106,9 +106,9 @@ current_directory_history_limit = 5
 	}
 
 	// Test that current directory commands come first
-	results, err = manager.GetAllHistory(currentDir)
+	results, err = manager.FindHistory(currentDir, nil)
 	if err != nil {
-		t.Fatalf("GetAllHistory failed: %v", err)
+		t.Fatalf("FindHistory failed: %v", err)
 	}
 	if len(results) < 3 || results[0].Directory != currentDir {
 		t.Errorf("Current directory commands should be listed first")
