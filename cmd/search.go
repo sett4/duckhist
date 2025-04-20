@@ -126,7 +126,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 		}
 
 		if table.GetRowCount() > 1 {
-			table.Select(1, 0) // Select first row after header
+			table.Select(table.GetRowCount()-1, 0) // Select last row
 		}
 	}
 
