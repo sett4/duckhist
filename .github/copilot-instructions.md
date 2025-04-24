@@ -29,4 +29,4 @@
 ## タスク完了の前に
 
 - `go test`でテストの成功を確認すること
-- `go build -o duckhist ./cmd`でビルドすること
+- `go build -o duckhist ./main.go`でビルドすること

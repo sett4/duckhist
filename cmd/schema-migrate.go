@@ -1,4 +1,4 @@
-package main
+package cmd
 
 import (
 	"duckhist/internal/config"

@@ -14,7 +14,7 @@ duckhist is a Go language program designed to store zsh command history in DuckD
 - Incremental search integration with peco/fzf
 - Schema management through migrations
 
-## Installation
+## Build
 
 ```bash
 go build -o duckhist ./cmd
@@ -41,17 +41,13 @@ source ~/.config/duckhist/zsh-duckhist.zsh
 ### Display Command History
 
 ```bash
-duckhist list
+duckhist search
 ```
 
 ### Search Command History with Incremental Search
 
 ```zsh
-# Using peco
-duckhist history | peco
-
-# Using fzf
-duckhist history | fzf
+press CTRL+R
 ```
 
 ## Command Line
@@ -66,6 +62,7 @@ duckhist history | fzf
 - `duckhist add -- <command>`: Add a command to history
 - `duckhist list`: Display saved history in chronological order (newest first)
 - `duckhist history`: Output command history for incremental search tools
+- `duckhist search`: Incremental history search
 - `duckhist schema-migrate`: Update database schema to the latest version
 - `duckhist force-version`: Force database schema version
   - `--config`: Specify configuration file path
