@@ -14,10 +14,17 @@ duckhist is a Go language program designed to store zsh command history in DuckD
 - Incremental search integration with peco/fzf
 - Schema management through migrations
 
+## Installation
+
+```bash
+go install github.com/sett4/duckhist@latest
+export PATH=$PATH:$HOME/go/bin
+```
+
 ## Build
 
 ```bash
-go build -o duckhist ./cmd
+go build -o duckhist
 ```
 
 ## Usage
