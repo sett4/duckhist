@@ -3,11 +3,13 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
+	"unicode/utf8"
 
 	"duckhist/internal/config"
 	"duckhist/internal/history"
 
-	"github.com/damiendart/pathshorten"
 	"github.com/dustin/go-humanize"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -117,7 +119,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 			dateStr := humanize.Time(entry.Timestamp)
 
 			// Shorten directory
-			dir := pathshorten.PathShorten(entry.Directory, "/", 20)
+			dir := ShortenPath(entry.Directory)
 
 			// Add cells to the row
 			table.SetCell(row, 0, tview.NewTableCell(dateStr))
@@ -178,4 +180,53 @@ func runSearch(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+// ShortenPath converts
+//
+//	/Users/foo/Documents/bar/baz  -> ~/D/b/baz
+//	/usr/share/screen/utf8encodings -> /u/s/s/utf8encodings
+func ShortenPath(path string) string {
+	if path == "" {
+		return ""
+	}
+
+	// 1. 正規化
+	clean := filepath.Clean(path)
+
+	// 2. $HOME を ~ に置き換え
+	if home, _ := os.UserHomeDir(); home != "" {
+		// filepath.Clean は末尾の / を消すので、/Users/foo も /Users/foo/ も一致する
+		if strings.HasPrefix(clean, home) {
+			clean = strings.Replace(clean, home, "~", 1)
+		}
+	}
+
+	// 3. パスセパレータで分割
+	sep := string(filepath.Separator)
+	parts := strings.Split(clean, sep)
+
+	// （Unix のルート "/" による空要素 or "~" を取り除かないように注意）
+	start := 0
+	prefix := ""
+	if parts[0] == "" { // 先頭が / のとき ["", "usr", "share", ...]
+		prefix = sep
+		start = 1
+	}
+	if parts[0] == "~" { // 先頭が ~ のとき ["~", "Documents", ...]
+		prefix = "~" + sep
+		start = 1
+	}
+
+	// 4. 末尾以外を 1 文字に短縮
+	for i := start; i < len(parts)-1; i++ {
+		if parts[i] == "" {
+			continue
+		}
+		r, _ := utf8.DecodeRuneInString(parts[i])
+		parts[i] = string(r)
+	}
+
+	// 5. 再結合して返す
+	return prefix + strings.Join(parts[start:], sep)
 }
