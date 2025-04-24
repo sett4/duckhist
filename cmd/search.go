@@ -123,7 +123,9 @@ func runSearch(cmd *cobra.Command, args []string) error {
 
 			// Add cells to the row
 			table.SetCell(row, 0, tview.NewTableCell(dateStr))
-			table.SetCell(row, 1, tview.NewTableCell(dir))
+			dirCell := tview.NewTableCell(dir)
+			dirCell.SetReference(entry.Directory) // Allow directory cell to expand
+			table.SetCell(row, 1, dirCell)
 			table.SetCell(row, 2, tview.NewTableCell(entry.Command))
 		}
 
@@ -143,11 +145,25 @@ func runSearch(cmd *cobra.Command, args []string) error {
 	// Set up key handling
 	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
-		case tcell.KeyTab, tcell.KeyEnter:
+		case tcell.KeyTab:
 			// Output selected command and exit
 			if table.GetRowCount() > 1 {
 				row, _ := table.GetSelection()
-				command := table.GetCell(row, 2).Text // Get command from third column
+				command := table.GetCell(row, 2).Text
+
+				app.Stop()
+				dirRef, ok := table.GetCell(row, 1).GetReference().(string)
+				if !ok {
+					panic("failed to assert directory reference as string")
+				}
+				fmt.Println("cd " + dirRef + ";" + command)
+			}
+			return nil
+		case tcell.KeyEnter:
+			// Output selected command and exit (original behavior)
+			if table.GetRowCount() > 1 {
+				row, _ := table.GetSelection()
+				command := table.GetCell(row, 2).Text
 				app.Stop()
 				fmt.Println(command)
 			}
