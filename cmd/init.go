@@ -6,9 +6,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"duckhist/internal/config"
-	"duckhist/internal/embedded"
-	"duckhist/internal/history"
+	"github.com/sett4/duckhist/internal/config"
+	"github.com/sett4/duckhist/internal/embedded"
+	"github.com/sett4/duckhist/internal/history"
 
 	"github.com/spf13/cobra"
 )

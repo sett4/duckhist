@@ -1,12 +1,13 @@
 package cmd
 
 import (
-	"duckhist/internal/config"
-	"duckhist/internal/embedded"
 	"fmt"
 	"log"
 
-	_ "duckhist/internal/migrate"
+	"github.com/sett4/duckhist/internal/config"
+	"github.com/sett4/duckhist/internal/embedded"
+
+	_ "github.com/sett4/duckhist/internal/migrate"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/source/iofs"

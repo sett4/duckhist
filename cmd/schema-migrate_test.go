@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	_ "duckhist/internal/migrate"
+	_ "github.com/sett4/duckhist/internal/migrate"
 )
 
 func TestRunMigrations(t *testing.T) {

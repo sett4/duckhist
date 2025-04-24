@@ -2,7 +2,6 @@ package migrate
 
 import (
 	"database/sql"
-	"duckhist/internal/embedded"
 	"errors"
 	"fmt"
 	"io"
@@ -13,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/sett4/duckhist/internal/embedded"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database"

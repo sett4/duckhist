@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log"
 
-	"duckhist/internal/config"
-	"duckhist/internal/history"
+	"github.com/sett4/duckhist/internal/config"
+	"github.com/sett4/duckhist/internal/history"
 
 	"github.com/spf13/cobra"
 )

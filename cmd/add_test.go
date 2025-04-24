@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"duckhist/internal/history"
+	"github.com/sett4/duckhist/internal/history"
 
 	_ "github.com/marcboeker/go-duckdb"
 )

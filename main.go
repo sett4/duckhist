@@ -1,6 +1,8 @@
 package main
 
-import "duckhist/cmd"
+import (
+	"github.com/sett4/duckhist/cmd"
+)
 
 func main() {
 	cmd.Execute()

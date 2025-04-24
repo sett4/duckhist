@@ -7,8 +7,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"duckhist/internal/config"
-	"duckhist/internal/history"
+	"github.com/sett4/duckhist/internal/config"
+	"github.com/sett4/duckhist/internal/history"
 
 	"github.com/dustin/go-humanize"
 	"github.com/gdamore/tcell/v2"

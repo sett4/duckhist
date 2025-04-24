@@ -1,4 +1,4 @@
-module duckhist
+module github.com/sett4/duckhist
 
 go 1.24
 

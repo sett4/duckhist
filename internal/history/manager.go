@@ -2,11 +2,13 @@ package history
 
 import (
 	"database/sql"
-	"duckhist/internal/migrate"
 	"fmt"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/sett4/duckhist/internal/migrate"
+	_ "github.com/sett4/duckhist/internal/migrate"
 
 	"github.com/google/uuid"
 	_ "github.com/marcboeker/go-duckdb"
