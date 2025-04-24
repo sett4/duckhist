@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"duckhist/internal/config"
+	"duckhist/internal/embedded"
 	"duckhist/internal/history"
 
 	"github.com/spf13/cobra"
@@ -91,13 +92,7 @@ func (ic *InitConfig) CreateZshIntegration() error {
 	}
 
 	scriptPath := filepath.Join(filepath.Dir(ic.GetConfigPath()), "zsh-duckhist.zsh")
-	scriptContent := `# duckhist zsh integration
-duckhist_add_history() {
-    duckhist add -- "$1"
-}
-zshaddhistory_functions+=("duckhist_add_history")
-`
-	if err := os.WriteFile(scriptPath, []byte(scriptContent), 0644); err != nil {
+	if err := os.WriteFile(scriptPath, []byte(embedded.GetZshIntegrationScript()), 0644); err != nil {
 		return fmt.Errorf("failed to create Zsh integration script: %w", err)
 	}
 
