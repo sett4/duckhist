@@ -114,3 +114,28 @@ current_directory_history_limit = 5
 		t.Errorf("Current directory commands should be listed first")
 	}
 }
+
+func TestShortenPath(t *testing.T) {
+	// Test cases
+	thuruTests := []struct {
+		path      string
+		maxLength int
+		expected  string
+	}{
+		{"/home/user/documents", 50, "/home/user/documents"},
+		{"/home/user/documents/../file.txt", 50, "/home/user/file.txt"},
+		{"./documents/file.txt", 50, "documents/file.txt"},
+		{"/home/user/documents/file.txt", 50, "/home/user/documents/file.txt"},
+		{"/home/user/documents/file.txt", 23, "/h/u/documents/file.txt"},
+		{"/home/user/documents/file.txt", 20, "/h/u/d/file.txt"},
+		{"/home/user/documents/file.txt", 14, ".../d/file.txt"},
+		{"/home/user/documents/file.txt", 05, ".../file.txt"},
+	}
+
+	for _, test := range thuruTests {
+		result := ShortenPath(test.path, test.maxLength)
+		if result != test.expected {
+			t.Errorf("Expected %s, got %s", test.expected, result)
+		}
+	}
+}

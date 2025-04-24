@@ -119,7 +119,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 			dateStr := humanize.Time(entry.Timestamp)
 
 			// Shorten directory
-			dir := ShortenPath(entry.Directory)
+			dir := ShortenPath(entry.Directory, 20)
 
 			// Add cells to the row
 			table.SetCell(row, 0, tview.NewTableCell(dateStr))
@@ -186,7 +186,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 //
 //	/Users/foo/Documents/bar/baz  -> ~/D/b/baz
 //	/usr/share/screen/utf8encodings -> /u/s/s/utf8encodings
-func ShortenPath(path string) string {
+func ShortenPath(path string, maxLength int) string {
 	if path == "" {
 		return ""
 	}
@@ -220,13 +220,25 @@ func ShortenPath(path string) string {
 
 	// 4. 末尾以外を 1 文字に短縮
 	for i := start; i < len(parts)-1; i++ {
+		if len(strings.Join(parts[start:], sep)) < maxLength {
+			break
+		}
 		if parts[i] == "" {
 			continue
 		}
+
 		r, _ := utf8.DecodeRuneInString(parts[i])
 		parts[i] = string(r)
+
 	}
 
 	// 5. 再結合して返す
-	return prefix + strings.Join(parts[start:], sep)
+	for i := start; i < len(parts)-1; i++ {
+		if len(prefix+strings.Join(parts[i:], sep)) <= maxLength {
+			return prefix + strings.Join(parts[i:], sep)
+		}
+		prefix = ".../"
+	}
+
+	return prefix + strings.Join(parts[len(parts)-1:], sep)
 }
