@@ -10,7 +10,6 @@ import (
 	"github.com/sett4/duckhist/internal/migrate"
 	_ "github.com/sett4/duckhist/internal/migrate"
 
-	"github.com/google/uuid"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/oklog/ulid/v2"
 )
@@ -212,7 +211,43 @@ func (m *Manager) AddCommand(command string, directory string, tty string, sid s
 		}
 	}
 
-	id := uuid.Must(uuid.FromBytes(ulid.Make().Bytes()))
+	id := ulid.Make().String()
+
+	_, err = m.db.Exec(`
+        INSERT INTO history (
+            id, command, executed_at, executing_host, 
+            executing_dir, executing_user, tty, sid
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		id, command, executedAt, hostname, directory, username, tty, sid)
+	return false, err
+}
+
+// AddCommandWithTimestamp adds a command to history with a specific timestamp
+func (m *Manager) AddCommandWithTimestamp(command string, directory string, tty string, sid string, hostname string, username string, executedAt time.Time, noDedup bool) (bool, error) {
+	if directory == "" {
+		var err error
+		directory, err = os.Getwd()
+		if err != nil {
+			return false, fmt.Errorf("failed to get current directory: %w", err)
+		}
+	}
+
+	var isDup bool
+	var err error
+
+	if !noDedup {
+		// Check for duplicates
+		isDup, err = m.isDuplicate(command, directory, hostname, username)
+		if err != nil {
+			return false, err
+		}
+
+		if isDup {
+			return true, nil
+		}
+	}
+
+	id := ulid.Make().String()
 
 	_, err = m.db.Exec(`
         INSERT INTO history (

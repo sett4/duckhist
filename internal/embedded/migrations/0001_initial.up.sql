@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS history (
-    id UUID PRIMARY KEY,
+    id VARCHAR(26) PRIMARY KEY,
     command TEXT,
     executed_at TIMESTAMP,
     executing_host TEXT,
