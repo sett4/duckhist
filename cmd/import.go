@@ -18,7 +18,7 @@ import (
 
 var (
 	importFile string
-	importCmd = &cobra.Command{
+	importCmd  = &cobra.Command{
 		Use:   "import",
 		Short: "Import commands from a CSV file",
 		Long: `Import commands from a CSV file into the history database.
@@ -145,7 +145,7 @@ func runImport(cmd *cobra.Command, args []string) error {
 		sid := getColumnValue(record, columnMap, "sid")
 
 		// Add command to history
-		_, err = manager.AddCommandWithTimestamp(command, directory, tty, sid, hostname, username, executedAt, true)
+		_, err = manager.AddCommand(command, directory, tty, sid, hostname, username, executedAt, true)
 		if err != nil {
 			log.Printf("Warning: Failed to import command at line %d: %v", lineNum, err)
 			continue

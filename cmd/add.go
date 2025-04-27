@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/sett4/duckhist/internal/config"
 	"github.com/sett4/duckhist/internal/history"
@@ -50,18 +51,13 @@ func (ca *CommandAdder) AddCommand(command string, directory string, tty string,
 		return false, fmt.Errorf("failed to load config: %w", err)
 	}
 
-	// if ca.verbose {
-	// 	fmt.Printf("config_path: %s\n", ca.config)
-	// 	fmt.Printf("database_path: %s\n", cfg.DatabasePath)
-	// }
-
 	manager, err := history.NewManagerReadWrite(cfg.DatabasePath)
 	if err != nil {
 		return false, fmt.Errorf("failed to create history manager: %w", err)
 	}
 	defer manager.Close()
 
-	isDup, err := manager.AddCommand(command, directory, tty, sid, hostname, username, noDedup)
+	isDup, err := manager.AddCommand(command, directory, tty, sid, hostname, username, time.Now(), noDedup)
 	if err != nil {
 		return false, fmt.Errorf("failed to add command: %w", err)
 	}

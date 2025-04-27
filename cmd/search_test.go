@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/sett4/duckhist/internal/history"
 )
@@ -62,7 +63,7 @@ current_directory_history_limit = 5
 	}
 
 	for _, tc := range testCommands {
-		isDup, err := manager.AddCommand(tc.command, tc.directory, "", "", "localhost", "testuser", false)
+		isDup, err := manager.AddCommand(tc.command, tc.directory, "", "", "localhost", "testuser", time.Now(), false)
 		if err != nil {
 			t.Fatalf("Failed to add command: %v", err)
 		}

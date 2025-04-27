@@ -259,6 +259,7 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 		command := "ls -la"
 		hostname, _ := os.Hostname()
 		username := os.Getenv("USER")
+
 		isDup, err := adder.AddCommand(command, "", "", "", hostname, username, false)
 		if err != nil {
 			t.Fatalf("AddCommand failed: %v", err)
@@ -286,6 +287,7 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 		adder := NewCommandAdder("nonexistent/config.toml", false)
 		hostname, _ := os.Hostname()
 		username := os.Getenv("USER")
+
 		_, err := adder.AddCommand("ls", "", "", "", hostname, username, false)
 		if err == nil {
 			t.Error("expected error for invalid config path, got nil")
