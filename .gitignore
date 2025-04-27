@@ -22,4 +22,7 @@ main
 duckhist
 
 # Test database
-test/test.duckdb
+test/test.db
+test/test.db-*
+test/test.db-shm
+test/test.db-wal

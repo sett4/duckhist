@@ -1,5 +1,5 @@
-# Path to test DuckDB database file
-database_path = "test/test.duckdb"
+# Path to test SQLite database file
+database_path = "test/test.db"
 
 # Current directory history limit (default: 5)
 current_directory_history_limit = 5

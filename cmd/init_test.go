@@ -50,7 +50,7 @@ func TestInitConfig_InitializeDatabase(t *testing.T) {
 		}
 
 		// Create config file with absolute path
-		dbPath := filepath.Join(tmpDir, ".duckhist.duckdb")
+		dbPath := filepath.Join(tmpDir, ".duckhist.db")
 		content := fmt.Sprintf("database_path = %q", dbPath)
 		configPath := ic.GetConfigPath()
 		if err := os.WriteFile(configPath, []byte(content), 0644); err != nil {
@@ -74,7 +74,7 @@ func TestInitConfig_InitializeDatabase(t *testing.T) {
 		customConfigPath := filepath.Join(tmpDir, "custom.toml")
 
 		// Create custom config file with absolute path
-		dbPath := filepath.Join(tmpDir, "custom.duckdb")
+		dbPath := filepath.Join(tmpDir, "custom.db")
 		customConfig := fmt.Sprintf("database_path = %q", dbPath)
 		if err := os.WriteFile(customConfigPath, []byte(customConfig), 0644); err != nil {
 			t.Fatalf("failed to create custom config: %v", err)
@@ -196,8 +196,8 @@ func TestInitConfig_CreateDefaultConfig(t *testing.T) {
 			t.Fatalf("failed to read config file: %v", err)
 		}
 
-		expectedContent := `# Path to DuckDB database file
-database_path = "~/.duckhist.duckdb"
+		expectedContent := `# Path to SQLite database file
+database_path = "~/.duckhist.db"
 `
 		if string(content) != expectedContent {
 			t.Errorf("unexpected config content.\nexpected:\n%s\ngot:\n%s", expectedContent, string(content))

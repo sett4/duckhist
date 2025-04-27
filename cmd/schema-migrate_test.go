@@ -25,7 +25,7 @@ func TestRunMigrations(t *testing.T) {
 	}
 
 	// Verify migrations were applied
-	db, err := sql.Open("duckdb", dbPath)
+	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		t.Fatalf("Failed to open database: %v", err)
 	}
@@ -33,7 +33,7 @@ func TestRunMigrations(t *testing.T) {
 
 	// Check if history table exists and has the expected columns
 	var tableName string
-	err = db.QueryRow("SELECT table_name FROM information_schema.tables WHERE table_name = 'history'").Scan(&tableName)
+	err = db.QueryRow("SELECT name FROM sqlite_master WHERE type='table' AND name='history'").Scan(&tableName)
 	if err != nil {
 		t.Fatalf("History table not found: %v", err)
 	}

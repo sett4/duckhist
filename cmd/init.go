@@ -45,8 +45,8 @@ func (ic *InitConfig) EnsureConfigDir() error {
 func (ic *InitConfig) CreateDefaultConfig() error {
 	configPath := ic.GetConfigPath()
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		content := `# Path to DuckDB database file
-database_path = "~/.duckhist.duckdb"
+		content := `# Path to SQLite database file
+database_path = "~/.duckhist.db"
 `
 		if err := os.WriteFile(configPath, []byte(content), 0644); err != nil {
 			return fmt.Errorf("failed to create config file: %w", err)

@@ -1,14 +1,14 @@
 # duckhist
 
-A Go program that stores zsh command history in DuckDB.
+A Go program that stores zsh command history in SQLite.
 
 ## Overview
 
-duckhist is a Go language program designed to store zsh command history in DuckDB. It manages command history chronologically and enables efficient searching.
+duckhist is a Go language program designed to store zsh command history in SQLite. It manages command history chronologically and enables efficient searching.
 
 ## Features
 
-- Store zsh command history in DuckDB
+- Store zsh command history in SQLite
 - Display command history in chronological order (newest first)
 - Filter command history based on current directory
 - Incremental search integration with peco/fzf
@@ -35,7 +35,7 @@ go build -o duckhist
 duckhist init
 ```
 
-This creates the default configuration file (`~/.config/duckhist/duckhist.toml`) and an empty database file (`~/.duckhist.duckdb`).
+This creates the default configuration file (`~/.config/duckhist/duckhist.toml`) and an empty database file (`~/.duckhist.db`).
 
 ### zsh Configuration
 
@@ -80,8 +80,8 @@ press CTRL+R
 The configuration file (default: `~/.config/duckhist/duckhist.toml`) allows you to set the following options:
 
 ```toml
-# Path to DuckDB database file
-database_path = "~/.duckhist.duckdb"
+# Path to SQLite database file
+database_path = "~/.duckhist.db"
 
 # Number of history entries to display for current directory (default: 5)
 current_directory_history_limit = 5
@@ -89,7 +89,7 @@ current_directory_history_limit = 5
 
 ## Dependencies
 
-- `github.com/duckdb/duckdb-go`: DuckDB Go bindings
+- `github.com/mattn/go-sqlite3`: SQLite Go bindings
 - `github.com/spf13/cobra`: Used for building command-line interfaces
 
 ## Project Directory Structure

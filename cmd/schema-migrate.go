@@ -23,7 +23,7 @@ func RunMigrations(dbPath string) error {
 	}
 
 	// Create migration instance
-	m, err := migrate.NewWithSourceInstance("iofs", sourceDriver, fmt.Sprintf("duckdb://%s", dbPath))
+	m, err := migrate.NewWithSourceInstance("iofs", sourceDriver, fmt.Sprintf("sqlite3://%s", dbPath))
 	if err != nil {
 		return fmt.Errorf("failed to create migration instance: %w", err)
 	}

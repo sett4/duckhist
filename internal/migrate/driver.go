@@ -18,12 +18,12 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database"
 	"github.com/hashicorp/go-multierror"
-	_ "github.com/marcboeker/go-duckdb"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 // Register driver with golang-migrate
 func init() {
-	database.Register("duckdb", &DuckDB{})
+	database.Register("sqlite3", &SQLite{})
 }
 
 // GetLatestMigrationVersion returns the latest migration version from embedded migrations
@@ -77,7 +77,7 @@ func CheckSchemaVersion(db *sql.DB) (bool, int, int, error) {
 
 	// Check if schema_migrations table exists
 	var tableExists bool
-	err = db.QueryRow("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'schema_migrations')").Scan(&tableExists)
+	err = db.QueryRow("SELECT EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='schema_migrations')").Scan(&tableExists)
 	if err != nil {
 		return false, 0, requiredVersion, fmt.Errorf("failed to check if schema_migrations table exists: %w", err)
 	}
@@ -103,21 +103,21 @@ func CheckSchemaVersion(db *sql.DB) (bool, int, int, error) {
 	return currentVersion == requiredVersion, currentVersion, requiredVersion, nil
 }
 
-// DuckDB is a migrate driver for DuckDB
-type DuckDB struct {
+// SQLite is a migrate driver for SQLite
+type SQLite struct {
 	db       *sql.DB
 	lock     sync.Mutex
 	filePath string
 }
 
 // Open returns a new driver instance configured with parameters
-func (d *DuckDB) Open(dsn string) (database.Driver, error) {
+func (s *SQLite) Open(dsn string) (database.Driver, error) {
 	purl, err := nurl.Parse(dsn)
 	if err != nil {
 		return nil, fmt.Errorf("parsing url: %w", err)
 	}
-	dbfile := strings.Replace(migrate.FilterCustomQuery(purl).String(), "duckdb://", "", 1)
-	db, err := sql.Open("duckdb", dbfile)
+	dbfile := strings.Replace(migrate.FilterCustomQuery(purl).String(), "sqlite3://", "", 1)
+	db, err := sql.Open("sqlite3", dbfile)
 	if err != nil {
 		return nil, fmt.Errorf("opening '%s': %w", dbfile, err)
 	}
@@ -125,40 +125,40 @@ func (d *DuckDB) Open(dsn string) (database.Driver, error) {
 	if err := db.Ping(); err != nil {
 		return nil, fmt.Errorf("pinging: %w", err)
 	}
-	d.db = db
+	s.db = db
 
-	if err := d.ensureVersionTable(); err != nil {
+	if err := s.ensureVersionTable(); err != nil {
 		return nil, fmt.Errorf("ensuring version table: %w", err)
 	}
 
-	return d, nil
+	return s, nil
 }
 
 // Close closes the underlying database instance
-func (d *DuckDB) Close() error {
-	return d.db.Close()
+func (s *SQLite) Close() error {
+	return s.db.Close()
 }
 
 // Lock acquires a database lock for migrations
-func (d *DuckDB) Lock() error {
-	d.lock.Lock()
+func (s *SQLite) Lock() error {
+	s.lock.Lock()
 	return nil
 }
 
 // Unlock releases the database lock for migrations
-func (d *DuckDB) Unlock() error {
-	d.lock.Unlock()
+func (s *SQLite) Unlock() error {
+	s.lock.Unlock()
 	return nil
 }
 
 // Run applies a migration to the database
-func (d *DuckDB) Run(migration io.Reader) error {
+func (s *SQLite) Run(migration io.Reader) error {
 	migr, err := io.ReadAll(migration)
 	if err != nil {
 		return err
 	}
 
-	tx, err := d.db.Begin()
+	tx, err := s.db.Begin()
 	if err != nil {
 		return err
 	}
@@ -174,16 +174,16 @@ func (d *DuckDB) Run(migration io.Reader) error {
 var ii = 0
 
 // SetVersion sets the current migration version
-func (d *DuckDB) SetVersion(version int, dirty bool) error {
-	_, err := d.db.Exec("INSERT INTO schema_migrations (version, dirty, applied_at) VALUES (?, ?, now()) ON CONFLICT DO UPDATE SET dirty = EXCLUDED.dirty, applied_at = now()", version, dirty)
+func (s *SQLite) SetVersion(version int, dirty bool) error {
+	_, err := s.db.Exec("INSERT INTO schema_migrations (version, dirty, applied_at) VALUES (?, ?, CURRENT_TIMESTAMP) ON CONFLICT(version) DO UPDATE SET dirty = EXCLUDED.dirty, applied_at = CURRENT_TIMESTAMP", version, dirty)
 	return err
 }
 
 // Version returns the current migration version
-func (d *DuckDB) Version() (int, bool, error) {
+func (s *SQLite) Version() (int, bool, error) {
 	var version int
 	var dirty bool
-	err := d.db.QueryRow("SELECT version, dirty FROM schema_migrations ORDER BY version DESC LIMIT 1").Scan(&version, &dirty)
+	err := s.db.QueryRow("SELECT version, dirty FROM schema_migrations ORDER BY version DESC LIMIT 1").Scan(&version, &dirty)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return 0, false, nil
@@ -194,18 +194,18 @@ func (d *DuckDB) Version() (int, bool, error) {
 }
 
 // Drop drops the database
-func (d *DuckDB) Drop() error {
-	_, err := d.db.Exec("DROP TABLE IF EXISTS schema_migrations")
+func (s *SQLite) Drop() error {
+	_, err := s.db.Exec("DROP TABLE IF EXISTS schema_migrations")
 	return err
 }
 
-func (d *DuckDB) ensureVersionTable() (err error) {
-	if err = d.Lock(); err != nil {
+func (s *SQLite) ensureVersionTable() (err error) {
+	if err = s.Lock(); err != nil {
 		return err
 	}
 
 	defer func() {
-		if e := d.Unlock(); e != nil {
+		if e := s.Unlock(); e != nil {
 			if err == nil {
 				err = e
 			} else {
@@ -214,9 +214,9 @@ func (d *DuckDB) ensureVersionTable() (err error) {
 		}
 	}()
 
-	query := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS schema_migrations (version BIGINT PRIMARY KEY, dirty BOOLEAN, applied_at TIMESTAMP default current_timestamp);`)
+	query := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, dirty BOOLEAN, applied_at TIMESTAMP default CURRENT_TIMESTAMP);`)
 
-	if _, err := d.db.Exec(query); err != nil {
+	if _, err := s.db.Exec(query); err != nil {
 		return fmt.Errorf("creating version table via '%s': %w", query, err)
 	}
 

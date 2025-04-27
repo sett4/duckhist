@@ -2,7 +2,7 @@
 
 このプロジェクトは`duckhist`と呼ばれます。
 
-このプロジェクト duckhist は、zsh のヒストリーを DuckDB に保存する Go 言語のプログラムを開発することを目的としています。以下にプロジェクトのスケルトンを示します。
+このプロジェクト duckhist は、zsh のヒストリーを SQLite に保存する Go 言語のプログラムを開発することを目的としています。以下にプロジェクトのスケルトンを示します。
 
 ## プロジェクトのディレクトリ構造
 
@@ -17,7 +17,7 @@
 
 ## 必要な依存関係
 
-- `github.com/duckdb/duckdb-go`: DuckDB の Go バインディング
+- `github.com/mattn/go-sqlite3`: SQLite の Go バインディング
 - `github.com/spf13/cobra`: コマンドラインインターフェースの構築に使用
 
 ## コマンドライン
@@ -30,9 +30,9 @@
 
 - `duckhist init`: 初期設定を行う
   - デフォルトの設定ファイル（`~/.config/duckhist/duckhist.toml`）を作成
-  - 空のデータベースファイル（`~/.duckhist.duckdb`）を作成
+  - 空のデータベースファイル（`~/.duckhist.db`）を作成
 - `duckhist add -- <command>`: コマンドをヒストリーに追加
-  - ULID を内部で生成し、UUID として DuckDB に保存
+  - ULID を内部で生成し、UUID として SQLite に保存
   - コマンドの実行時刻、ホスト名、ディレクトリ、ユーザー名も記録
 - `duckhist list`: 保存されたヒストリーを時系列順（新しい順）に表示
 - `duckhist history`: コマンド履歴をインクリメンタルサーチツール（peco/fzf）向けに出力
@@ -51,8 +51,8 @@
 設定ファイル（デフォルト: `~/.config/duckhist/duckhist.toml`）では以下の項目を設定できます：
 
 ```toml
-# DuckDBのデータベースファイルのパス
-database_path = "~/.duckhist.duckdb"
+# SQLiteのデータベースファイルのパス
+database_path = "~/.duckhist.db"
 
 # カレントディレクトリの履歴表示件数（デフォルト: 5）
 current_directory_history_limit = 5
@@ -80,9 +80,9 @@ current_directory_history_limit = 5
   - `add.go`: add サブコマンドの実装
   - `list.go`: list サブコマンドの実装
 - `internal/history/`: ヒストリー管理のロジック
-  - `manager.go`: DuckDB への接続とクエリの実行
+  - `manager.go`: SQLite への接続とクエリの実行
     - ULID を生成して UUID に変換し、時系列でソート可能な ID を実現
-    - `~/.duckhist.duckdb`にデータを保存
+    - `~/.duckhist.db`にデータを保存
 
 ## 使用方法
 

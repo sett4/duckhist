@@ -9,17 +9,17 @@ import (
 	"strings"
 	"testing"
 
-	_ "github.com/marcboeker/go-duckdb"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 func TestSchemaVersionCheck(t *testing.T) {
 	// Create temporary directory for test
 	tmpDir := t.TempDir()
-	dbPath := filepath.Join(tmpDir, "test.duckdb")
+	dbPath := filepath.Join(tmpDir, "test.sqlite")
 
 	t.Run("warning message when schema version is outdated", func(t *testing.T) {
 		// Create a new database with schema_migrations table
-		db, err := sql.Open("duckdb", dbPath)
+		db, err := sql.Open("sqlite3", dbPath)
 		if err != nil {
 			t.Fatalf("failed to open database: %v", err)
 		}
@@ -28,7 +28,7 @@ func TestSchemaVersionCheck(t *testing.T) {
 		_, err = db.Exec(`CREATE TABLE IF NOT EXISTS schema_migrations (
 			version BIGINT PRIMARY KEY,
 			dirty BOOLEAN,
-			applied_at TIMESTAMP default current_timestamp
+			applied_at TIMESTAMP default CURRENT_TIMESTAMP
 		)`)
 		if err != nil {
 			t.Fatalf("failed to create schema_migrations table: %v", err)
@@ -76,7 +76,7 @@ func TestSchemaVersionCheck(t *testing.T) {
 		os.Remove(dbPath)
 
 		// Create a new database with up-to-date schema version
-		db, err := sql.Open("duckdb", dbPath)
+		db, err := sql.Open("sqlite3", dbPath)
 		if err != nil {
 			t.Fatalf("failed to open database: %v", err)
 		}
@@ -85,7 +85,7 @@ func TestSchemaVersionCheck(t *testing.T) {
 		_, err = db.Exec(`CREATE TABLE IF NOT EXISTS schema_migrations (
 			version BIGINT PRIMARY KEY,
 			dirty BOOLEAN,
-			applied_at TIMESTAMP default current_timestamp
+			applied_at TIMESTAMP default CURRENT_TIMESTAMP
 		)`)
 		if err != nil {
 			t.Fatalf("failed to create schema_migrations table: %v", err)

@@ -11,7 +11,7 @@ import (
 	_ "github.com/sett4/duckhist/internal/migrate"
 
 	"github.com/google/uuid"
-	_ "github.com/marcboeker/go-duckdb"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/oklog/ulid/v2"
 )
 
@@ -132,8 +132,14 @@ func checkSchemaVersion(db *sql.DB) {
 
 // NewManagerReadWrite creates a new Manager with read-write access to the database
 func NewManagerReadWrite(dbPath string) (*Manager, error) {
-	db, err := sql.Open("duckdb", dbPath)
+	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
+		return nil, err
+	}
+
+	// Enable foreign key constraints and WAL mode
+	if _, err := db.Exec("PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL;"); err != nil {
+		db.Close()
 		return nil, err
 	}
 
@@ -145,7 +151,7 @@ func NewManagerReadWrite(dbPath string) (*Manager, error) {
 
 // NewManagerReadOnly creates a new Manager with read-only access to the database
 func NewManagerReadOnly(dbPath string) (*Manager, error) {
-	db, err := sql.Open("duckdb", dbPath+"?access_mode=READ_ONLY")
+	db, err := sql.Open("sqlite3", dbPath+"?mode=ro")
 	if err != nil {
 		return nil, err
 	}

@@ -10,7 +10,7 @@ import (
 
 	"github.com/sett4/duckhist/internal/history"
 
-	_ "github.com/marcboeker/go-duckdb"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 func TestCommandAdder_AddCommand(t *testing.T) {
@@ -20,7 +20,7 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 
 		// Create config file
 		configPath := filepath.Join(tmpDir, "config.toml")
-		dbPath := filepath.Join(tmpDir, "test.duckdb")
+		dbPath := filepath.Join(tmpDir, "test.sqlite")
 		content := fmt.Sprintf("database_path = %q", dbPath)
 		if err := os.WriteFile(configPath, []byte(content), 0644); err != nil {
 			t.Fatalf("failed to create config file: %v", err)
@@ -81,7 +81,7 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 
 		// Create config file
 		configPath := filepath.Join(tmpDir, "config.toml")
-		dbPath := filepath.Join(tmpDir, "test.duckdb")
+		dbPath := filepath.Join(tmpDir, "test.sqlite")
 		content := fmt.Sprintf("database_path = %q", dbPath)
 		if err := os.WriteFile(configPath, []byte(content), 0644); err != nil {
 			t.Fatalf("failed to create config file: %v", err)
@@ -137,7 +137,7 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 
 		// Create config file
 		configPath := filepath.Join(tmpDir, "config.toml")
-		dbPath := filepath.Join(tmpDir, "test.duckdb")
+		dbPath := filepath.Join(tmpDir, "test.sqlite")
 		content := fmt.Sprintf("database_path = %q", dbPath)
 		if err := os.WriteFile(configPath, []byte(content), 0644); err != nil {
 			t.Fatalf("failed to create config file: %v", err)
@@ -206,7 +206,7 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 
 		// Create config file
 		configPath := filepath.Join(tmpDir, "config.toml")
-		dbPath := filepath.Join(tmpDir, "test.duckdb")
+		dbPath := filepath.Join(tmpDir, "test.sqlite")
 		content := fmt.Sprintf("database_path = %q", dbPath)
 		if err := os.WriteFile(configPath, []byte(content), 0644); err != nil {
 			t.Fatalf("failed to create config file: %v", err)
@@ -236,7 +236,7 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 
 		// Create config file
 		configPath := filepath.Join(tmpDir, "config.toml")
-		dbPath := filepath.Join(tmpDir, "test.duckdb")
+		dbPath := filepath.Join(tmpDir, "test.sqlite")
 		content := fmt.Sprintf("database_path = %q", dbPath)
 		if err := os.WriteFile(configPath, []byte(content), 0644); err != nil {
 			t.Fatalf("failed to create config file: %v", err)
@@ -298,7 +298,7 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 
 		// Create config file
 		configPath := filepath.Join(tmpDir, "config.toml")
-		dbPath := filepath.Join(tmpDir, "test.duckdb")
+		dbPath := filepath.Join(tmpDir, "test.sqlite")
 		content := fmt.Sprintf("database_path = %q", dbPath)
 		if err := os.WriteFile(configPath, []byte(content), 0644); err != nil {
 			t.Fatalf("failed to create config file: %v", err)
@@ -359,7 +359,7 @@ func TestAddCmd_TTY(t *testing.T) {
 
 	// Create config file
 	configPath := filepath.Join(tmpDir, "config.toml")
-	dbPath := filepath.Join(tmpDir, "test.duckdb")
+	dbPath := filepath.Join(tmpDir, "test.sqlite")
 	content := fmt.Sprintf("database_path = %q", dbPath)
 	if err := os.WriteFile(configPath, []byte(content), 0644); err != nil {
 		t.Fatalf("failed to create config file: %v", err)

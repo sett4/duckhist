@@ -6,17 +6,17 @@ import (
 	"path/filepath"
 	"testing"
 
-	_ "github.com/marcboeker/go-duckdb"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 func TestCheckSchemaVersion(t *testing.T) {
 	// Create temporary directory for test
 	tmpDir := t.TempDir()
-	dbPath := filepath.Join(tmpDir, "test.duckdb")
+	dbPath := filepath.Join(tmpDir, "test.sqlite")
 
 	t.Run("schema_migrations table does not exist", func(t *testing.T) {
 		// Create a new database without schema_migrations table
-		db, err := sql.Open("duckdb", dbPath)
+		db, err := sql.Open("sqlite3", dbPath)
 		if err != nil {
 			t.Fatalf("failed to open database: %v", err)
 		}
@@ -42,7 +42,7 @@ func TestCheckSchemaVersion(t *testing.T) {
 
 	t.Run("schema version is outdated", func(t *testing.T) {
 		// Create a new database with schema_migrations table
-		db, err := sql.Open("duckdb", dbPath)
+		db, err := sql.Open("sqlite3", dbPath)
 		if err != nil {
 			t.Fatalf("failed to open database: %v", err)
 		}
@@ -50,9 +50,9 @@ func TestCheckSchemaVersion(t *testing.T) {
 
 		// Create schema_migrations table
 		_, err = db.Exec(`CREATE TABLE IF NOT EXISTS schema_migrations (
-			version BIGINT PRIMARY KEY,
+			version INTEGER PRIMARY KEY,
 			dirty BOOLEAN,
-			applied_at TIMESTAMP default current_timestamp
+			applied_at TIMESTAMP default CURRENT_TIMESTAMP
 		)`)
 		if err != nil {
 			t.Fatalf("failed to create schema_migrations table: %v", err)
@@ -85,7 +85,7 @@ func TestCheckSchemaVersion(t *testing.T) {
 	t.Run("schema version is up to date", func(t *testing.T) {
 		// Create a new database with schema_migrations table
 		os.Remove(dbPath) // Remove previous database
-		db, err := sql.Open("duckdb", dbPath)
+		db, err := sql.Open("sqlite3", dbPath)
 		if err != nil {
 			t.Fatalf("failed to open database: %v", err)
 		}
@@ -93,9 +93,9 @@ func TestCheckSchemaVersion(t *testing.T) {
 
 		// Create schema_migrations table
 		_, err = db.Exec(`CREATE TABLE IF NOT EXISTS schema_migrations (
-			version BIGINT PRIMARY KEY,
+			version INTEGER PRIMARY KEY,
 			dirty BOOLEAN,
-			applied_at TIMESTAMP default current_timestamp
+			applied_at TIMESTAMP default CURRENT_TIMESTAMP
 		)`)
 		if err != nil {
 			t.Fatalf("failed to create schema_migrations table: %v", err)
