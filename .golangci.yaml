@@ -1,0 +1,11 @@
+version: "2"
+
+linters:
+  enable:
+    - govet
+    - errcheck
+    - ineffassign
+    - staticcheck
+    - unused
+  disable:
+    - prealloc

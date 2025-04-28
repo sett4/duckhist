@@ -74,7 +74,11 @@ func (ic *InitConfig) InitializeDatabase() error {
 	if err != nil {
 		return fmt.Errorf("failed to initialize database: %w", err)
 	}
-	defer manager.Close()
+	defer func() {
+		if err := manager.Close(); err != nil {
+			log.Printf("failed to close manager: %v", err)
+		}
+	}()
 
 	// Run migrations to create necessary tables and indexes
 	if err := RunMigrations(cfg.DatabasePath); err != nil {
@@ -125,7 +129,7 @@ var initCmd = &cobra.Command{
 		} else {
 			// Check if custom config file exists
 			if _, err := os.Stat(configPath); os.IsNotExist(err) {
-				log.Fatal(fmt.Sprintf("cannot open config file: %s", configPath))
+				log.Fatalf("cannot open config file: %s", configPath)
 			}
 		}
 

@@ -12,7 +12,6 @@ import (
 	"github.com/sett4/duckhist/internal/config"
 	"github.com/sett4/duckhist/internal/history"
 
-	"github.com/oklog/ulid/v2"
 	"github.com/spf13/cobra"
 )
 
@@ -39,7 +38,9 @@ If id is empty, a new ULID will be generated based on the current time.`,
 
 func init() {
 	importCmd.Flags().StringVarP(&importFile, "file", "f", "", "CSV file to import (required)")
-	importCmd.MarkFlagRequired("file")
+	if err := importCmd.MarkFlagRequired("file"); err != nil {
+		log.Printf("failed to mark file flag as required: %v", err)
+	}
 	rootCmd.AddCommand(importCmd)
 }
 
@@ -55,7 +56,11 @@ func runImport(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to open CSV file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			log.Printf("failed to close file: %v", err)
+		}
+	}()
 
 	// Create CSV reader
 	reader := csv.NewReader(file)
@@ -82,7 +87,11 @@ func runImport(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create history manager: %w", err)
 	}
-	defer manager.Close()
+	defer func() {
+		if err := manager.Close(); err != nil {
+			log.Printf("failed to close manager: %v", err)
+		}
+	}()
 
 	// Import records
 	lineNum := 1 // 1-based line number (header is line 1)
@@ -94,12 +103,6 @@ func runImport(cmd *cobra.Command, args []string) error {
 		}
 		if err != nil {
 			return fmt.Errorf("failed to read CSV line %d: %w", lineNum, err)
-		}
-
-		// Get values from record
-		id := getColumnValue(record, columnMap, "id")
-		if id == "" {
-			id = ulid.Make().String()
 		}
 
 		command := getColumnValue(record, columnMap, "command")
@@ -120,7 +123,6 @@ func runImport(cmd *cobra.Command, args []string) error {
 
 		hostname := getColumnValue(record, columnMap, "executing_host")
 		if hostname == "" {
-			var err error
 			hostname, err = os.Hostname()
 			if err != nil {
 				log.Printf("Warning: Failed to get hostname at line %d: %v", lineNum, err)
@@ -129,7 +131,6 @@ func runImport(cmd *cobra.Command, args []string) error {
 
 		directory := getColumnValue(record, columnMap, "executing_dir")
 		if directory == "" {
-			var err error
 			directory, err = os.Getwd()
 			if err != nil {
 				log.Printf("Warning: Failed to get current directory at line %d: %v", lineNum, err)

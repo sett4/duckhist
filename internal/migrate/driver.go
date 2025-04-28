@@ -105,9 +105,8 @@ func CheckSchemaVersion(db *sql.DB) (bool, int, int, error) {
 
 // SQLite is a migrate driver for SQLite
 type SQLite struct {
-	db       *sql.DB
-	lock     sync.Mutex
-	filePath string
+	db   *sql.DB
+	lock sync.Mutex
 }
 
 // Open returns a new driver instance configured with parameters
@@ -164,14 +163,14 @@ func (s *SQLite) Run(migration io.Reader) error {
 	}
 
 	if _, err := tx.Exec(string(migr)); err != nil {
-		tx.Rollback()
-		return err
+		if rbErr := tx.Rollback(); rbErr != nil {
+			return fmt.Errorf("migration failed: %v, rollback failed: %v", err, rbErr)
+		}
+		return fmt.Errorf("migration failed: %v", err)
 	}
 
 	return tx.Commit()
 }
-
-var ii = 0
 
 // SetVersion sets the current migration version
 func (s *SQLite) SetVersion(version int, dirty bool) error {
@@ -214,10 +213,14 @@ func (s *SQLite) ensureVersionTable() (err error) {
 		}
 	}()
 
-	query := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, dirty BOOLEAN, applied_at TIMESTAMP default CURRENT_TIMESTAMP);`)
+	const createSchemaMigrationsTableQuery = `CREATE TABLE IF NOT EXISTS schema_migrations (
+    version INTEGER PRIMARY KEY,
+    dirty BOOLEAN,
+    applied_at TIMESTAMP default CURRENT_TIMESTAMP
+);`
 
-	if _, err := s.db.Exec(query); err != nil {
-		return fmt.Errorf("creating version table via '%s': %w", query, err)
+	if _, err := s.db.Exec(createSchemaMigrationsTableQuery); err != nil {
+		return fmt.Errorf("creating version table via '%s': %w", createSchemaMigrationsTableQuery, err)
 	}
 
 	return nil

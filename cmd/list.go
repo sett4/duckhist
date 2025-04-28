@@ -14,27 +14,35 @@ var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List command history",
 	Long:  `List all commands in the history database in reverse chronological order.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		cfg, err := config.LoadConfig(cfgFile)
-		if err != nil {
-			log.Fatal(err)
-		}
+	RunE:  runList,
+}
 
-		manager, err := history.NewManagerReadOnly(cfg.DatabasePath)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer manager.Close()
+func runList(cmd *cobra.Command, args []string) error {
+	cfg, err := config.LoadConfig(cfgFile)
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
+	}
 
-		commands, err := manager.ListCommands()
-		if err != nil {
-			log.Fatal(err)
+	manager, err := history.NewManagerReadOnly(cfg.DatabasePath)
+	if err != nil {
+		return fmt.Errorf("failed to create history manager: %w", err)
+	}
+	defer func() {
+		if err := manager.Close(); err != nil {
+			log.Printf("failed to close manager: %v", err)
 		}
+	}()
 
-		for _, command := range commands {
-			fmt.Println(command)
-		}
-	},
+	commands, err := manager.ListCommands()
+	if err != nil {
+		return fmt.Errorf("failed to list commands: %w", err)
+	}
+
+	for _, command := range commands {
+		fmt.Println(command)
+	}
+
+	return nil
 }
 
 func init() {

@@ -27,7 +27,15 @@ func RunMigrations(dbPath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create migration instance: %w", err)
 	}
-	defer m.Close()
+	defer func() {
+		sourceErr, dbErr := m.Close()
+		if sourceErr != nil {
+			log.Printf("failed to close source: %v", sourceErr)
+		}
+		if dbErr != nil {
+			log.Printf("failed to close database: %v", dbErr)
+		}
+	}()
 
 	// Apply all up migrations
 	if err := m.Up(); err != nil && err != migrate.ErrNoChange {

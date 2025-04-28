@@ -20,7 +20,11 @@ func TestCheckSchemaVersion(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to open database: %v", err)
 		}
-		defer db.Close()
+		defer func() {
+			if err := db.Close(); err != nil {
+				t.Errorf("failed to close database: %v", err)
+			}
+		}()
 
 		// Check schema version
 		ok, current, required, err := CheckSchemaVersion(db)
@@ -46,7 +50,11 @@ func TestCheckSchemaVersion(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to open database: %v", err)
 		}
-		defer db.Close()
+		defer func() {
+			if err := db.Close(); err != nil {
+				t.Errorf("failed to close database: %v", err)
+			}
+		}()
 
 		// Create schema_migrations table
 		_, err = db.Exec(`CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -84,12 +92,18 @@ func TestCheckSchemaVersion(t *testing.T) {
 
 	t.Run("schema version is up to date", func(t *testing.T) {
 		// Create a new database with schema_migrations table
-		os.Remove(dbPath) // Remove previous database
+		if err := os.Remove(dbPath); err != nil && !os.IsNotExist(err) {
+			t.Errorf("failed to remove database: %v", err)
+		}
 		db, err := sql.Open("sqlite3", dbPath)
 		if err != nil {
 			t.Fatalf("failed to open database: %v", err)
 		}
-		defer db.Close()
+		defer func() {
+			if err := db.Close(); err != nil {
+				t.Errorf("failed to close database: %v", err)
+			}
+		}()
 
 		// Create schema_migrations table
 		_, err = db.Exec(`CREATE TABLE IF NOT EXISTS schema_migrations (
