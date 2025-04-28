@@ -57,7 +57,11 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to create history manager: %v", err)
 		}
-		defer manager.Close()
+		defer func() {
+			if err := manager.Close(); err != nil {
+				t.Errorf("failed to close manager: %v", err)
+			}
+		}()
 
 		// Check if command exists in history
 		entries, err := manager.Query().InDirectory(currentDir).Limit(1).OrderByCurrentDirFirst(currentDir).GetEntries()
@@ -113,7 +117,11 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to create history manager: %v", err)
 		}
-		defer manager.Close()
+		defer func() {
+			if err := manager.Close(); err != nil {
+				t.Errorf("failed to close manager: %v", err)
+			}
+		}()
 
 		// Check if command exists in history
 		entries, err := manager.Query().InDirectory(specifiedDir).Limit(1).OrderByCurrentDirFirst(specifiedDir).GetEntries()
@@ -183,13 +191,20 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Third AddCommand failed: %v", err)
 		}
+		if isDup {
+			t.Error("expected third command to not be marked as duplicate when noDedup is true")
+		}
 
 		// Verify commands were added
 		manager, err := history.NewManagerReadWrite(dbPath)
 		if err != nil {
 			t.Fatalf("failed to create history manager: %v", err)
 		}
-		defer manager.Close()
+		defer func() {
+			if err := manager.Close(); err != nil {
+				t.Errorf("failed to close manager: %v", err)
+			}
+		}()
 
 		entries, err := manager.Query().InDirectory(currentDir).Limit(10).OrderByCurrentDirFirst(currentDir).GetEntries()
 		if err != nil {
@@ -269,12 +284,16 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 		}
 
 		// Restore stdout
-		w.Close()
+		if err := w.Close(); err != nil {
+			panic(fmt.Sprintf("failed to close writer: %v", err))
+		}
 		os.Stdout = oldStdout
 
 		// Read captured output
 		var buf bytes.Buffer
-		io.Copy(&buf, r)
+		if _, err := io.Copy(&buf, r); err != nil {
+			panic(fmt.Sprintf("failed to copy output: %v", err))
+		}
 		output := buf.String()
 
 		expectedOutput := fmt.Sprintf("Command added to history: %s\n", command)
@@ -339,7 +358,11 @@ func TestCommandAdder_AddCommand(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to create history manager: %v", err)
 		}
-		defer manager.Close()
+		defer func() {
+			if err := manager.Close(); err != nil {
+				t.Errorf("failed to close manager: %v", err)
+			}
+		}()
 
 		// Check if command exists in history
 		entries, err := manager.Query().InDirectory(currentDir).Limit(1).OrderByCurrentDirFirst(currentDir).GetEntries()
@@ -376,7 +399,9 @@ func TestAddCmd_TTY(t *testing.T) {
 	originalTTY := os.Getenv("TTY")
 	originalCfgFile := cfgFile
 	defer func() {
-		os.Setenv("TTY", originalTTY)
+		if err := os.Setenv("TTY", originalTTY); err != nil {
+			t.Errorf("failed to restore TTY env: %v", err)
+		}
 		cfgFile = originalCfgFile
 	}()
 
@@ -386,7 +411,9 @@ func TestAddCmd_TTY(t *testing.T) {
 	t.Run("TTY from env", func(t *testing.T) {
 		// Set environment variable
 		envTTY := "/dev/pts/test1"
-		os.Setenv("TTY", envTTY)
+		if err := os.Setenv("TTY", envTTY); err != nil {
+			t.Errorf("failed to set TTY env: %v", err)
+		}
 
 		// Reset global variables
 		tty = ""
@@ -402,9 +429,16 @@ func TestAddCmd_TTY(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to create history manager: %v", err)
 		}
-		defer manager.Close()
+		defer func() {
+			if err := manager.Close(); err != nil {
+				t.Errorf("failed to close manager: %v", err)
+			}
+		}()
 
 		list, err := manager.FindHistory("", nil)
+		if err != nil {
+			t.Fatalf("failed to find history: %v", err)
+		}
 		if len(list) != 1 {
 			t.Errorf("failed to execute add command: %v", list)
 		}

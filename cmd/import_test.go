@@ -52,7 +52,11 @@ func TestRunImport(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to create history manager: %v", err)
 		}
-		defer manager.Close()
+		defer func() {
+			if err := manager.Close(); err != nil {
+				t.Errorf("failed to close manager: %v", err)
+			}
+		}()
 
 		entries, err := manager.Query().GetEntries()
 		if err != nil {

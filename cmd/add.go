@@ -55,7 +55,11 @@ func (ca *CommandAdder) AddCommand(command string, directory string, tty string,
 	if err != nil {
 		return false, fmt.Errorf("failed to create history manager: %w", err)
 	}
-	defer manager.Close()
+	defer func() {
+		if err := manager.Close(); err != nil {
+			log.Printf("failed to close manager: %v", err)
+		}
+	}()
 
 	isDup, err := manager.AddCommand(command, directory, tty, sid, hostname, username, time.Now(), noDedup)
 	if err != nil {

@@ -3,6 +3,7 @@ package history
 import (
 	"bytes"
 	"database/sql"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -11,6 +12,27 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 )
+
+func captureStderr(f func()) string {
+	oldStderr := os.Stderr
+	r, w, _ := os.Pipe()
+	os.Stderr = w
+
+	f()
+
+	if err := w.Close(); err != nil {
+		panic(fmt.Sprintf("failed to close writer: %v", err))
+	}
+
+	os.Stderr = oldStderr
+
+	var buf bytes.Buffer
+	if _, err := io.Copy(&buf, r); err != nil {
+		panic(fmt.Sprintf("failed to copy output: %v", err))
+	}
+
+	return buf.String()
+}
 
 func TestSchemaVersionCheck(t *testing.T) {
 	// Create temporary directory for test
@@ -39,28 +61,23 @@ func TestSchemaVersionCheck(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to insert schema version: %v", err)
 		}
-		db.Close()
+		if err := db.Close(); err != nil {
+			t.Fatalf("failed to close database: %v", err)
+		}
 
 		// Capture stderr
-		oldStderr := os.Stderr
-		r, w, _ := os.Pipe()
-		os.Stderr = w
-
-		// Create manager which should trigger version check
-		manager, err := NewManagerReadWrite(dbPath)
-		if err != nil {
-			t.Fatalf("NewManagerReadWrite failed: %v", err)
-		}
-		defer manager.Close()
-
-		// Restore stderr
-		w.Close()
-		os.Stderr = oldStderr
-
-		// Read captured output
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		output := buf.String()
+		output := captureStderr(func() {
+			// Create manager which should trigger version check
+			manager, err := NewManagerReadWrite(dbPath)
+			if err != nil {
+				t.Fatalf("NewManagerReadWrite failed: %v", err)
+			}
+			defer func() {
+				if err := manager.Close(); err != nil {
+					t.Fatalf("failed to close manager: %v", err)
+				}
+			}()
+		})
 
 		// Verify warning message
 		if !strings.Contains(output, "Warning: Database schema version mismatch") {
@@ -73,7 +90,9 @@ func TestSchemaVersionCheck(t *testing.T) {
 
 	t.Run("no warning message when schema version is up to date", func(t *testing.T) {
 		// Remove previous database
-		os.Remove(dbPath)
+		if err := os.Remove(dbPath); err != nil && !os.IsNotExist(err) {
+			t.Errorf("failed to remove database: %v", err)
+		}
 
 		// Create a new database with up-to-date schema version
 		db, err := sql.Open("sqlite3", dbPath)
@@ -99,28 +118,23 @@ func TestSchemaVersionCheck(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to insert schema version: %v", err)
 		}
-		db.Close()
+		if err := db.Close(); err != nil {
+			t.Fatalf("failed to close database: %v", err)
+		}
 
 		// Capture stderr
-		oldStderr := os.Stderr
-		r, w, _ := os.Pipe()
-		os.Stderr = w
-
-		// Create manager which should trigger version check
-		manager, err := NewManagerReadWrite(dbPath)
-		if err != nil {
-			t.Fatalf("NewManagerReadWrite failed: %v", err)
-		}
-		defer manager.Close()
-
-		// Restore stderr
-		w.Close()
-		os.Stderr = oldStderr
-
-		// Read captured output
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		output := buf.String()
+		output := captureStderr(func() {
+			// Create manager which should trigger version check
+			manager, err := NewManagerReadWrite(dbPath)
+			if err != nil {
+				t.Fatalf("NewManagerReadWrite failed: %v", err)
+			}
+			defer func() {
+				if err := manager.Close(); err != nil {
+					t.Fatalf("failed to close manager: %v", err)
+				}
+			}()
+		})
 
 		// Verify no warning message
 		if strings.Contains(output, "Warning: Database schema version mismatch") {

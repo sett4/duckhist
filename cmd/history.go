@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/sett4/duckhist/internal/config"
@@ -40,7 +41,11 @@ func runHistory(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create history manager: %w", err)
 	}
-	defer manager.Close()
+	defer func() {
+		if err := manager.Close(); err != nil {
+			log.Printf("failed to close manager: %v", err)
+		}
+	}()
 
 	currentDir := historyDirFlag
 	if currentDir == "" {

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -47,7 +48,11 @@ func runSearch(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create history manager: %w", err)
 	}
-	defer manager.Close()
+	defer func() {
+		if err := manager.Close(); err != nil {
+			log.Printf("failed to close manager: %v", err)
+		}
+	}()
 
 	currentDir := searchDirFlag
 	if currentDir == "" {

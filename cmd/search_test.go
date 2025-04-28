@@ -15,7 +15,11 @@ func TestSearchCommand(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp directory: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() {
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Errorf("failed to remove temp directory: %v", err)
+		}
+	}()
 
 	// Create a test database file
 	dbPath := filepath.Join(tempDir, "test.duckdb")
@@ -71,7 +75,9 @@ current_directory_history_limit = 5
 			t.Errorf("Expected command not to be duplicate: %s", tc.command)
 		}
 	}
-	manager.Close()
+	if err := manager.Close(); err != nil {
+		t.Errorf("failed to close manager: %v", err)
+	}
 
 	// Test the search functionality
 	// Note: We can't fully test the interactive UI in a unit test,
@@ -83,7 +89,11 @@ current_directory_history_limit = 5
 	if err != nil {
 		t.Fatalf("Failed to create history manager: %v", err)
 	}
-	defer manager.Close()
+	defer func() {
+		if err := manager.Close(); err != nil {
+			t.Errorf("failed to close manager: %v", err)
+		}
+	}()
 
 	// Test empty query (should return all commands)
 	results, err := manager.FindByCommand("", currentDir)

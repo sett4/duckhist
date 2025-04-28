@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/sett4/duckhist/internal/migrate"
-	_ "github.com/sett4/duckhist/internal/migrate"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/oklog/ulid/v2"
@@ -98,7 +97,11 @@ func (q *HistoryQuery) GetEntries() ([]Entry, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to close rows: %v\n", err)
+		}
+	}()
 
 	var entries []Entry
 	for rows.Next() {
@@ -138,7 +141,9 @@ func NewManagerReadWrite(dbPath string) (*Manager, error) {
 
 	// Enable foreign key constraints and WAL mode
 	if _, err := db.Exec("PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL;"); err != nil {
-		db.Close()
+		if closeErr := db.Close(); closeErr != nil {
+			return nil, fmt.Errorf("failed to enable PRAGMA and close DB: %v, close error: %v", err, closeErr)
+		}
 		return nil, err
 	}
 
