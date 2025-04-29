@@ -78,6 +78,11 @@ func runSearch(cmd *cobra.Command, args []string) error {
 		SetFixed(1, 0).
 		SetBorders(false)
 
+	// Create help text view
+	helpText := tview.NewTextView().
+		SetText("TAB: cd & cmd    ENTER: cmd    ESC: exit").
+		SetTextAlign(tview.AlignCenter)
+
 	// Set table headers
 	table.SetCell(0, 0, tview.NewTableCell("Date").SetSelectable(false))
 	table.SetCell(0, 1, tview.NewTableCell("Directory").SetSelectable(false))
@@ -91,6 +96,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 	// Create layout with table on top and input at bottom
 	flex := tview.NewFlex().
 		SetDirection(tview.FlexRow).
+		AddItem(helpText, 1, 0, false).
 		AddItem(table, 0, 1, false).
 		AddItem(input, 1, 0, true)
 
