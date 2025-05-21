@@ -101,7 +101,7 @@ func runImportHistory(cmd *cobra.Command, args []string) error {
 		tty := ""    // Not available from zsh history
 		sid := ""    // Not available from zsh history
 
-		err := manager.AddCommand(commandText, directory, tty, sid, hostname, username, timestamp, true)
+		_, err := manager.AddCommand(commandText, directory, tty, sid, hostname, username, timestamp, true)
 		if err != nil {
 			log.Printf("Failed to import command: \"%s\": %v", commandText, err)
 		} else {

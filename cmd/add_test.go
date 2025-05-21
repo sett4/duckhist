@@ -405,8 +405,8 @@ func TestAddCmd_TTY(t *testing.T) {
 		cfgFile = originalCfgFile
 	}()
 
-	rootCmd.ResetCommands()
-	rootCmd.AddCommand(addCmd)
+	// rootCmd.ResetCommands() // This was causing issues for other tests
+	// rootCmd.AddCommand(addCmd)    // Commands should be added by their init()
 
 	t.Run("TTY from env", func(t *testing.T) {
 		// Set environment variable
