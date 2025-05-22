@@ -92,7 +92,22 @@ echo "hello world"
     
 # A comment line, should be skipped if logic implies, but current parser might treat as command
 : 1678886402:0;git status
+: 1678886400:0;ls -l 
+: 1678886403:0;echo "another command"
+echo "hello world" 
 `
+	// Expected:
+	// "ls -l" (ts 1678886400) - import
+	// "echo "hello world"" (no ts) - import
+	// "cd /tmp" (ts 1678886401) - import
+	// "" (empty from ": 123:0;") - skip (empty command)
+	// "echo "bad time"" (invalid ts) - import
+	// "# A comment line..." (no ts) - import
+	// "git status" (ts 1678886402) - import
+	// "ls -l" (ts 1678886400) - skip (duplicate of first command)
+	// "echo "another command"" (ts 1678886403) - import
+	// "echo "hello world"" (no ts) - skip (duplicate of second command, timestamp doesn't matter for no_dedup=false with same command text)
+
 	_ = createDummyHistoryFile(t, tempHomeDir, historyContent)
 
 	// Execute the command
@@ -110,10 +125,10 @@ echo "hello world"
 	t.Logf("Command output: %s", output)
 
 	// Assertions
-	// The line "# A comment line..." is also parsed as a command currently.
-	expectedImportCount := 6 // "ls -l", "echo "hello world"", "cd /tmp", "# A comment...", "echo "bad time"", "git status"
-	                         // Empty line and ": 123:0;" (empty command) are skipped.
-	assert.Contains(t, output, fmt.Sprintf("Imported %d commands from %s", expectedImportCount, filepath.Join(tempHomeDir, ".zsh_history")))
+	expectedImportCount := 7
+	expectedSkippedCount := 2 
+	historyFilePath := filepath.Join(tempHomeDir, ".zsh_history")
+	assert.Contains(t, output, fmt.Sprintf("Imported %d commands and skipped %d duplicate commands from %s", expectedImportCount, expectedSkippedCount, historyFilePath))
 
 	// Verify database content
 	db, err := sql.Open("sqlite3", tempDbPath)
@@ -155,36 +170,135 @@ echo "hello world"
 	
 	// 3. git status
 	assert.Equal(t, "git status", commands[2].Command)
-	assert.Equal(t, int64(1678886402), commands[2].ExecutedAt.Unix()) // Use .Unix()
+	assert.Equal(t, int64(1678886402), commands[2].ExecutedAt.Unix())
+
+	// 4. echo "another command"
+	assert.Equal(t, "echo \"another command\"", commands[3].Command)
+	assert.Equal(t, int64(1678886403), commands[3].ExecutedAt.Unix())
+
 
 	// The remaining 3 commands ("echo "hello world"", "# A comment...", "echo "bad time"")
-	// will have timestamps set to time.Now() during import, so their relative order
-	// among themselves isn't strictly guaranteed by ORDER BY executed_at if they are imported
-	// within the same second. We'll check for their presence and approximate timestamp.
+	// will have timestamps set to time.Now() during import.
+	// Their relative order among themselves isn't strictly guaranteed by ORDER BY executed_at
+	// if they are imported within the same second.
+	// We'll check for their presence and approximate timestamp.
 
-	foundEchoHello := false
-	foundComment := false
-	foundEchoBadTime := false
-
+	nonTimestampedCommands := make(map[string]bool)
 	now := time.Now()
-	for i := 3; i < expectedImportCount; i++ {
+	for i := 4; i < expectedImportCount; i++ { // Start from index 4 for non-timestamped
 		cmd := commands[i]
-		// Direct time.Time comparison for WithinDuration
-		assert.WithinDuration(t, now, cmd.ExecutedAt, 5*time.Second, "Timestamp for non-timestamped entry should be recent")
-		switch cmd.Command {
-		case "echo \"hello world\"":
-			foundEchoHello = true
-		case "# A comment line, should be skipped if logic implies, but current parser might treat as command":
-			foundComment = true
-		case "echo \"bad time\"":
-			foundEchoBadTime = true
-		}
+		assert.WithinDuration(t, now, cmd.ExecutedAt, 5*time.Second, "Timestamp for non-timestamped entry should be recent: %s", cmd.Command)
+		nonTimestampedCommands[cmd.Command] = true
 	}
-	assert.True(t, foundEchoHello, "Command 'echo \"hello world\"' not found or in wrong group")
-	assert.True(t, foundComment, "Command '# A comment line...' not found or in wrong group")
-	assert.True(t, foundEchoBadTime, "Command 'echo \"bad time\"' not found or in wrong group")
+
+	assert.True(t, nonTimestampedCommands["echo \"hello world\""], "Command 'echo \"hello world\"' not found or in wrong group")
+	assert.True(t, nonTimestampedCommands["# A comment line, should be skipped if logic implies, but current parser might treat as command"], "Command '# A comment line...' not found or in wrong group")
+	assert.True(t, nonTimestampedCommands["echo \"bad time\""], "Command 'echo \"bad time\"' not found or in wrong group")
 }
 
+
+// TestImportHistory_Deduplication tests the deduplication logic more specifically.
+func TestImportHistory_Deduplication(t *testing.T) {
+	tempHomeDir := t.TempDir()
+	tempDbDir := t.TempDir()
+	tempDbPath := filepath.Join(tempDbDir, "test_dedup.db")
+
+	originalGetUserHomeDir := getUserHomeDir
+	getUserHomeDir = func() (string, error) { return tempHomeDir, nil }
+	t.Cleanup(func() { getUserHomeDir = originalGetUserHomeDir })
+
+	tempCfgFile := createTempConfigFile(t, tempDbPath)
+	originalCfgFile := cfgFile
+	cfgFile = tempCfgFile
+	t.Cleanup(func() { cfgFile = originalCfgFile })
+
+	initializeTestDB(t, tempDbPath)
+
+	historyContent := `
+: 100:0;command1
+: 200:0;command2
+: 100:0;command1 
+: 300:0;command3
+command2 
+: 400:0;command1
+command4
+command4
+`
+	// Expected:
+	// command1 (ts 100) - import
+	// command2 (ts 200) - import
+	// command1 (ts 100) - skip (exact duplicate)
+	// command3 (ts 300) - import
+	// command2 (no ts) - skip (duplicate of command2, different timestamp but same command text)
+	// command1 (ts 400) - skip (text "command1" already seen, noDedup=false means only text matters)
+	// command4 (no ts) - import (first encounter of "command4")
+	// command4 (no ts) - skip (text "command4" already seen)
+
+	_ = createDummyHistoryFile(t, tempHomeDir, historyContent)
+	historyFilePath := filepath.Join(tempHomeDir, ".zsh_history")
+
+	rootCmd.SetArgs([]string{"import-history"})
+	output, err := captureOutput(func() error {
+		_, cmdErr := rootCmd.ExecuteC()
+		return cmdErr
+	})
+
+	assert.NoError(t, err)
+	t.Logf("Deduplication test output: %s", output)
+
+	expectedImportCount := 4 // Corrected
+	expectedSkippedCount := 4 // Corrected
+	assert.Contains(t, output, fmt.Sprintf("Imported %d commands and skipped %d duplicate commands from %s", expectedImportCount, expectedSkippedCount, historyFilePath))
+
+	db, errDb := sql.Open("sqlite3", tempDbPath)
+	assert.NoError(t, errDb)
+	defer db.Close()
+
+	rows, errDb := db.Query("SELECT command, executed_at FROM history ORDER BY executed_at ASC, rowid ASC") // rowid for stable sort for no-ts
+	assert.NoError(t, errDb)
+	defer rows.Close()
+
+	var importedCommands []struct {
+		Command    string
+		ExecutedAt time.Time
+	}
+	for rows.Next() {
+		var cmdText string
+		var executedAtTime time.Time
+		errDb = rows.Scan(&cmdText, &executedAtTime)
+		assert.NoError(t, errDb)
+		importedCommands = append(importedCommands, struct {
+			Command    string
+			ExecutedAt time.Time
+		}{cmdText, executedAtTime})
+	}
+	assert.NoError(t, rows.Err())
+	assert.Len(t, importedCommands, expectedImportCount, "Number of commands in DB does not match expected import count")
+
+	// Verify imported commands and their timestamps
+	// 1. command1 (ts 100)
+	assert.Equal(t, "command1", importedCommands[0].Command)
+	assert.Equal(t, int64(100), importedCommands[0].ExecutedAt.Unix())
+
+	// 2. command2 (ts 200)
+	assert.Equal(t, "command2", importedCommands[1].Command)
+	assert.Equal(t, int64(200), importedCommands[1].ExecutedAt.Unix())
+
+	// 3. command3 (ts 300)
+	assert.Equal(t, "command3", importedCommands[2].Command)
+	assert.Equal(t, int64(300), importedCommands[2].ExecutedAt.Unix())
+	
+	// 4. command4 (no ts - should be recent)
+	// This is the first "command4" from the history file.
+	assert.Equal(t, "command4", importedCommands[3].Command)
+	assert.WithinDuration(t, time.Now(), importedCommands[3].ExecutedAt, 5*time.Second, "Timestamp for 'command4' should be recent")
+
+	// Verify that "command1" with ts 100 was imported.
+	// Verify that "command1" with ts 400 was SKIPPED.
+	// Verify that "command2" without timestamp was SKIPPED.
+	// And second "command4" was skipped
+	// This is implicitly checked by expectedImportCount and the specific checks above.
+}
 
 // TestImportHistory_FileNotFound tests behavior when history file is not found.
 func TestImportHistory_FileNotFound(t *testing.T) {

@@ -59,6 +59,7 @@ func runImportHistory(cmd *cobra.Command, args []string) error {
 
 	scanner := bufio.NewScanner(file)
 	importedCount := 0
+	skippedCount := 0
 
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -101,11 +102,15 @@ func runImportHistory(cmd *cobra.Command, args []string) error {
 		tty := ""    // Not available from zsh history
 		sid := ""    // Not available from zsh history
 
-		_, err := manager.AddCommand(commandText, directory, tty, sid, hostname, username, timestamp, true)
+		skipped, err := manager.AddCommand(commandText, directory, tty, sid, hostname, username, timestamp, false)
 		if err != nil {
 			log.Printf("Failed to import command: \"%s\": %v", commandText, err)
 		} else {
-			importedCount++
+			if skipped {
+				skippedCount++
+			} else {
+				importedCount++
+			}
 		}
 	}
 
@@ -113,6 +118,6 @@ func runImportHistory(cmd *cobra.Command, args []string) error {
 		log.Printf("Error reading history file: %v", err)
 	}
 
-	fmt.Printf("Imported %d commands from %s\n", importedCount, historyFilePath)
+	fmt.Printf("Imported %d commands and skipped %d duplicate commands from %s\n", importedCount, skippedCount, historyFilePath)
 	return nil
 }
