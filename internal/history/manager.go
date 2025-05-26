@@ -13,6 +13,12 @@ import (
 	"github.com/oklog/ulid/v2"
 )
 
+// SearchTermCondition holds individual search terms and their properties.
+type SearchTermCondition struct {
+	Term      string
+	IsNegated bool // For NOT operator
+}
+
 type Entry struct {
 	ID        string
 	Command   string
@@ -58,10 +64,62 @@ func (q *HistoryQuery) NotInDirectory(dir string) *HistoryQuery {
 	return q
 }
 
-// Search adds a condition to filter entries containing the search term
-func (q *HistoryQuery) Search(term string) *HistoryQuery {
+// SearchSimple adds a simple LIKE condition to filter entries containing the search term
+func (q *HistoryQuery) SearchSimple(term string) *HistoryQuery {
 	q.conditions = append(q.conditions, "command LIKE ?")
 	q.args = append(q.args, fmt.Sprintf("%%%s%%", term))
+	return q
+}
+
+// SearchComplex adds potentially complex AND/OR conditions based on parsed query.
+// It generates a single SQL condition string that encompasses the entire search logic.
+func (q *HistoryQuery) SearchComplex(parsedQuery [][]SearchTermCondition) *HistoryQuery {
+	if len(parsedQuery) == 0 {
+		return q
+	}
+
+	var orConditions []string
+	var orArgs []interface{}
+
+	for _, andGroup := range parsedQuery {
+		if len(andGroup) == 0 {
+			continue
+		}
+
+		var andConditions []string
+		var andArgs []interface{}
+
+		for _, condition := range andGroup {
+			sqlOperator := "LIKE"
+			if condition.IsNegated {
+				sqlOperator = "NOT LIKE"
+			}
+			andConditions = append(andConditions, fmt.Sprintf("command %s ?", sqlOperator))
+			andArgs = append(andArgs, fmt.Sprintf("%%%s%%", condition.Term))
+		}
+
+		if len(andConditions) > 0 {
+			// Wrap AND group in parentheses
+			orConditions = append(orConditions, "("+strings.Join(andConditions, " AND ")+")")
+			orArgs = append(orArgs, andArgs...)
+		}
+	}
+
+	if len(orConditions) > 0 {
+		// Join all OR groups and wrap them in a single parenthesis set if there are multiple OR groups
+		// or if there's only one OR group but we want to ensure it's treated as a single block
+		// when combined with other global conditions in GetEntries.
+		finalCondition := strings.Join(orConditions, " OR ")
+		if len(orConditions) > 1 { // Only add extra parentheses if there are multiple OR clauses
+			finalCondition = "(" + finalCondition + ")"
+		}
+		
+		if finalCondition != "" { // Ensure we don't add an empty condition
+			q.conditions = append(q.conditions, finalCondition)
+			q.args = append(q.args, orArgs...)
+		}
+	}
+
 	return q
 }
 
@@ -250,6 +308,44 @@ func (m *Manager) FindHistory(currentDir string, limit *int) ([]Entry, error) {
 	return q.GetEntries()
 }
 
+// ParseSearchQuery parses a raw search string into a structure for SQL conversion.
+// Output: [][]SearchTermCondition - Outer slice for OR groups, inner for AND conditions.
+func ParseSearchQuery(query string) [][]SearchTermCondition {
+	if query == "" {
+		return nil
+	}
+
+	orParts := strings.Split(query, " OR ")
+	parsedQuery := make([][]SearchTermCondition, 0, len(orParts))
+
+	for _, orPart := range orParts {
+		andParts := strings.Fields(orPart) // strings.Fields splits by whitespace
+		conditions := make([]SearchTermCondition, 0, len(andParts))
+		i := 0
+		for i < len(andParts) {
+			term := andParts[i]
+			if strings.ToUpper(term) == "NOT" {
+				if i+1 < len(andParts) {
+					conditions = append(conditions, SearchTermCondition{Term: andParts[i+1], IsNegated: true})
+					i += 2 // Consumed NOT and the term
+				} else {
+					// Trailing NOT, ignore or treat as error? For now, treat as a literal "NOT"
+					conditions = append(conditions, SearchTermCondition{Term: term, IsNegated: false})
+					i++
+				}
+			} else {
+				conditions = append(conditions, SearchTermCondition{Term: term, IsNegated: false})
+				i++
+			}
+		}
+		if len(conditions) > 0 {
+			parsedQuery = append(parsedQuery, conditions)
+		}
+	}
+
+	return parsedQuery
+}
+
 // FindByCommand searches for commands matching the given query
 // If query is empty, returns all commands
 // Results are ordered with current directory entries first
@@ -258,8 +354,27 @@ func (m *Manager) FindByCommand(query string, currentDir string) ([]Entry, error
 		return m.FindHistory(currentDir, nil)
 	}
 
+	parsedQuery := ParseSearchQuery(query)
+	if len(parsedQuery) == 0 && query != "" { 
+		// If query is not empty but parsedQuery is (e.g. query was "NOT" or "OR")
+		// it means no valid search terms were extracted.
+		// Depending on desired behavior, we could return no results or all results.
+		// For now, let's assume it means no results match this "empty" complex query.
+		// Or, alternatively, fall back to simple search if that's preferred.
+		// Given the new logic, an empty parsedQuery from a non-empty string means no specific filtering.
+		// Let's return no entries if the parsing results in nothing, to avoid returning everything.
+		// However, if the original query string was simply not parseable into conditions (e.g. "NOT", "OR"),
+		// then it's probably better to return no results.
+		// If the original string was valid but complex and resulted in an empty set of conditions (e.g. "NOT OR"),
+		// it's also likely that no results should be returned.
+		// The current ParseSearchQuery handles "NOT" at the end of an AND group by treating "NOT" as a literal.
+		// "OR" alone would result in empty parsedQuery.
+		return []Entry{}, nil 
+	}
+
+
 	return m.Query().
-		Search(query).
+		SearchComplex(parsedQuery).
 		OrderByCurrentDirFirst(currentDir).
 		GetEntries()
 }
