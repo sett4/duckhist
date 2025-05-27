@@ -80,7 +80,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 
 	// Create help text view
 	helpText := tview.NewTextView().
-		SetText("TAB: cd & cmd    ENTER: cmd    ESC: exit").
+		SetText("ESC: exit | ENTER: cmd | TAB: cd & cmd | KQL: term cmd:mycmd dir:/path host:host").
 		SetTextAlign(tview.AlignCenter)
 
 	// Set table headers
