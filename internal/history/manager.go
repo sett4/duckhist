@@ -7,10 +7,42 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alecthomas/participle/v2"
+	"github.com/alecthomas/participle/v2/lexer"
 	"github.com/sett4/duckhist/internal/migrate"
-
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/oklog/ulid/v2"
+)
+
+// KQL query language structs
+type KQLQuery struct {
+	Expressions []*Expression `@@*`
+}
+
+type Expression struct {
+	Field *Field `( @@`
+	Term  *Term  `| @@ )`
+}
+
+type Field struct {
+	Name  string `@("command" | "dir" | "directory" | "host" | "hostname") ":"`
+	Value string `@(Ident|String)`
+}
+
+type Term struct {
+	Value string `@(Ident|String)`
+}
+
+var kqlLexer = lexer.MustSimple([]lexer.SimpleRule{
+	{Name: "Ident", Pattern: `[a-zA-Z_][a-zA-Z0-9_]*`},
+	{Name: "String", Pattern: `"[^"]*"`},
+	{Name: "Punct", Pattern: `[-[!@#$%^&*()+_={}\|:;"'<,>.?/]|]`},
+	{Name: "Whitespace", Pattern: `\s+`},
+})
+
+var kqlParser = participle.MustBuild[KQLQuery](
+	participle.Lexer(kqlLexer),
+	participle.Unquote("String"),
 )
 
 type Entry struct {
@@ -60,8 +92,34 @@ func (q *HistoryQuery) NotInDirectory(dir string) *HistoryQuery {
 
 // Search adds a condition to filter entries containing the search term
 func (q *HistoryQuery) Search(term string) *HistoryQuery {
-	q.conditions = append(q.conditions, "command LIKE ?")
-	q.args = append(q.args, fmt.Sprintf("%%%s%%", term))
+	parsedQuery, err := kqlParser.ParseString("", term)
+	if err != nil {
+		// Fallback to old behavior if parsing fails
+		fmt.Fprintf(os.Stderr, "KQL parsing error: %v. Falling back to simple search.\n", err)
+		q.conditions = append(q.conditions, "command LIKE ?")
+		q.args = append(q.args, fmt.Sprintf("%%%s%%", term))
+		return q
+	}
+
+	for _, expr := range parsedQuery.Expressions {
+		if expr.Term != nil {
+			q.conditions = append(q.conditions, "command LIKE ?")
+			q.args = append(q.args, fmt.Sprintf("%%%s%%", expr.Term.Value))
+		} else if expr.Field != nil {
+			switch expr.Field.Name {
+			case "command":
+				q.conditions = append(q.conditions, "command LIKE ?")
+				q.args = append(q.args, fmt.Sprintf("%%%s%%", expr.Field.Value))
+			case "dir", "directory":
+				q.conditions = append(q.conditions, "executing_dir LIKE ?")
+				q.args = append(q.args, fmt.Sprintf("%%%s%%", expr.Field.Value))
+			case "host", "hostname":
+				q.conditions = append(q.conditions, "executing_host LIKE ?")
+				q.args = append(q.args, fmt.Sprintf("%%%s%%", expr.Field.Value))
+			}
+		}
+	}
+
 	return q
 }
 
