@@ -111,7 +111,7 @@ func TestSchemaVersionCheck(t *testing.T) {
 		}
 
 		// Get latest migration version from migrate package
-		latestVersion := 3 // Hardcoded to 3 based on current migrations
+		latestVersion := 4 // Hardcoded to 4 based on current migrations
 
 		// Insert latest version
 		_, err = db.Exec("INSERT INTO schema_migrations (version, dirty) VALUES (?, false)", latestVersion)

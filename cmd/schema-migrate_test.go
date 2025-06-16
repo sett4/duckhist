@@ -54,8 +54,8 @@ func TestRunMigrations(t *testing.T) {
 		t.Fatalf("Failed to get schema version: %v", err)
 	}
 
-	if version != 3 { // Latest migration version
-		t.Errorf("Expected schema version 3, got %d", version)
+	if version != 4 { // Latest migration version
+		t.Errorf("Expected schema version 4, got %d", version)
 	}
 
 	if dirty {

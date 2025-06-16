@@ -60,8 +60,20 @@ func (q *HistoryQuery) NotInDirectory(dir string) *HistoryQuery {
 
 // Search adds a condition to filter entries containing the search term
 func (q *HistoryQuery) Search(term string) *HistoryQuery {
-	q.conditions = append(q.conditions, "command LIKE ?")
-	q.args = append(q.args, fmt.Sprintf("%%%s%%", term))
+	term = strings.TrimSpace(term)
+	if term == "" {
+		return q
+	}
+	
+	// Split by whitespace to get individual keywords
+	keywords := strings.Fields(term)
+	
+	// Add LIKE condition for each keyword (AND logic)
+	for _, keyword := range keywords {
+		q.conditions = append(q.conditions, "command LIKE ?")
+		q.args = append(q.args, fmt.Sprintf("%%%s%%", keyword))
+	}
+	
 	return q
 }
 
