@@ -111,7 +111,7 @@ func TestSchemaVersionCheck(t *testing.T) {
 		}
 
 		// Get latest migration version from migrate package
-		latestVersion := 3 // Hardcoded to 3 based on current migrations
+		latestVersion := 4 // Hardcoded to 4 based on current migrations
 
 		// Insert latest version
 		_, err = db.Exec("INSERT INTO schema_migrations (version, dirty) VALUES (?, false)", latestVersion)
@@ -141,4 +141,92 @@ func TestSchemaVersionCheck(t *testing.T) {
 			t.Errorf("unexpected warning message: %s", output)
 		}
 	})
+}
+
+func TestParseSearchTerms(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected []string
+	}{
+		{
+			name:     "empty string",
+			input:    "",
+			expected: []string{},
+		},
+		{
+			name:     "single word",
+			input:    "git",
+			expected: []string{"git"},
+		},
+		{
+			name:     "multiple words",
+			input:    "git commit push",
+			expected: []string{"git", "commit", "push"},
+		},
+		{
+			name:     "quoted phrase",
+			input:    `"git commit"`,
+			expected: []string{"git commit"},
+		},
+		{
+			name:     "mixed keywords and quoted phrase",
+			input:    `git "commit -m" push`,
+			expected: []string{"git", "commit -m", "push"},
+		},
+		{
+			name:     "multiple quoted phrases",
+			input:    `"git commit" "docker run"`,
+			expected: []string{"git commit", "docker run"},
+		},
+		{
+			name:     "quoted phrase with extra spaces",
+			input:    `"  git commit  "`,
+			expected: []string{"  git commit  "},
+		},
+		{
+			name:     "unclosed quote",
+			input:    `git "commit -m`,
+			expected: []string{"git", "commit -m"},
+		},
+		{
+			name:     "empty quotes",
+			input:    `git "" push`,
+			expected: []string{"git", "push"},
+		},
+		{
+			name:     "only quotes",
+			input:    `""`,
+			expected: []string{},
+		},
+		{
+			name:     "whitespace variations",
+			input:    "  git   commit  push  ",
+			expected: []string{"git", "commit", "push"},
+		},
+		{
+			name:     "complex example",
+			input:    `docker "run --rm" -it "alpine:latest" sh`,
+			expected: []string{"docker", "run --rm", "-it", "alpine:latest", "sh"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := parseSearchTerms(tt.input)
+			
+			if len(result) != len(tt.expected) {
+				t.Errorf("expected %d terms, got %d", len(tt.expected), len(result))
+				t.Errorf("expected: %v", tt.expected)
+				t.Errorf("got: %v", result)
+				return
+			}
+			
+			for i, expected := range tt.expected {
+				if result[i] != expected {
+					t.Errorf("term %d: expected %q, got %q", i, expected, result[i])
+				}
+			}
+		})
+	}
 }

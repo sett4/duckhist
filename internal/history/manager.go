@@ -60,9 +60,69 @@ func (q *HistoryQuery) NotInDirectory(dir string) *HistoryQuery {
 
 // Search adds a condition to filter entries containing the search term
 func (q *HistoryQuery) Search(term string) *HistoryQuery {
-	q.conditions = append(q.conditions, "command LIKE ?")
-	q.args = append(q.args, fmt.Sprintf("%%%s%%", term))
+	term = strings.TrimSpace(term)
+	if term == "" {
+		return q
+	}
+	
+	// Parse keywords and quoted phrases
+	keywords := parseSearchTerms(term)
+	
+	// Add LIKE condition for each keyword/phrase (AND logic)
+	for _, keyword := range keywords {
+		q.conditions = append(q.conditions, "command LIKE ?")
+		q.args = append(q.args, fmt.Sprintf("%%%s%%", keyword))
+	}
+	
 	return q
+}
+
+// parseSearchTerms parses search terms, treating quoted strings as single phrases
+func parseSearchTerms(input string) []string {
+	var terms []string
+	var current strings.Builder
+	inQuotes := false
+	
+	for _, r := range input {
+		switch r {
+		case '"':
+			if inQuotes {
+				// End of quoted phrase
+				if current.Len() > 0 {
+					terms = append(terms, current.String())
+					current.Reset()
+				}
+				inQuotes = false
+			} else {
+				// Start of quoted phrase - add any accumulated term first
+				if current.Len() > 0 {
+					terms = append(terms, current.String())
+					current.Reset()
+				}
+				inQuotes = true
+			}
+		case ' ', '\t', '\n', '\r':
+			if inQuotes {
+				// Inside quotes, preserve whitespace
+				current.WriteRune(r)
+			} else {
+				// Outside quotes, treat as separator
+				if current.Len() > 0 {
+					terms = append(terms, current.String())
+					current.Reset()
+				}
+			}
+		default:
+			current.WriteRune(r)
+		}
+	}
+	
+	// Add final term if any
+	if current.Len() > 0 {
+		terms = append(terms, current.String())
+	}
+	
+	return terms
 }
 
 // Limit sets the maximum number of entries to return
